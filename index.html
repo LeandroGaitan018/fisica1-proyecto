@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Simulación de bola con rozamiento</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="titulo">
+    <h1>Trabajo final fisica 1</h1>
+  </header>
+
+  <div class="contenedor-grid">
+      
+    <canvas id="canvas" class="canvas" id="simulacion" width="550" height="300"></canvas>
+    
+    <div class="parametros">
+        <h2>Parámetros</h2>
+        <label>Masa (kg): <input type="number" id="masa" value="" min="0.1" step="0.1"></label>
+        <label>Velocidad inicial (m/s): <input type="number" id="velocidad" value="" min="0" step="0.5"></label>
+        <label>Distancia (m): <input type="number" id="distancia" value="" min="5" step="1"></label>
+        <button id="iniciar">Iniciar</button>
+    </div>
+
+    <div class="resultados">
+      <h2>Resultados</h2>
+      <p id="resultado">energia final:</p>
+    </div>
+
+    <div class="modelos">
+        <h2>Modelos</h2>
+        <div class="eleccion-modelos">
+          <button id="modelo1">Modelo 1: Sin rozamiento</button>
+          <button>Modelo 2: Con rozamiento</button>
+          <button>Modelo 3: </button>
+          <button>Modelo 4: </button>
+        </div>
+    </div>
+</div>
+<script src="script.js"></script>
+</body>
+</html>

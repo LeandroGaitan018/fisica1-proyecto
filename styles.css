@@ -1,0 +1,54 @@
+
+body{
+    font-family: Arial, Helvetica, sans-serif;
+    margin: 0;
+}
+.contenedor-grid{
+
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    grid-row: auto auto;
+    gap: 16px;
+    padding: 16px;
+    grid-template-rows: auto;
+}
+
+.titulo{
+    margin: 0.2em;
+    display: flex;
+    justify-content: center;
+    border: 0.2px solid black;
+    padding: 1em;
+    background-color: rgb(234, 255, 113);
+}
+
+.canvas{
+    grid-column: 0;
+    border-radius: 0.4em;
+    border: 2px ridge rgb(7, 32, 100);
+    
+}
+
+.parametros{
+    grid-column: 2;
+    display: flex;
+    flex-direction: column;
+    gap: 0.7em;
+    
+}
+
+.resultados{
+    grid-column: 3;
+}
+
+.modelos{
+    
+    grid-row: 2;
+}
+
+.eleccion-modelos{
+    display: flex;
+    flex-direction: row;
+    gap: 1em;
+    justify-content: space-between;
+}
