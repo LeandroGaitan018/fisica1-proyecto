@@ -2,8 +2,10 @@ const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 const resultado = document.getElementById("resultado");
 const btnIniciar = document.getElementById("iniciar");
+const btnModelo1 = document.getElementById("modelo1")
+const btnModelo2 = document.getElementById("modelo2")
 
-let bola, rozamientoZona, animacionActiva, offset;
+let bola, rozamientoZona, animacionActiva, offset, modeloActual = 1;
 
 function inicializar() {
   const masa = parseFloat(document.getElementById("masa").value);
@@ -43,15 +45,21 @@ function dibujarEscena() {
   if (offset > bola.longitudTotal - canvas.width) offset = bola.longitudTotal - canvas.width;
 
   // Dibujar piso
-  ctx.fillStyle = "rgb(151, 225, 248)";
+   if (modeloActual === 1) {
+    ctx.fillStyle = "rgb(151, 225, 248)" // azul claro para modelo sin rozamiento
+  } else {
+    ctx.fillStyle = "rgb(200, 180, 150)" // marrón para modelo con rozamiento
+  }
+
   ctx.fillRect(-offset, 210, bola.longitudTotal, 3);
 
-  // Dibujar puntos de rozamiento
-  ctx.fillStyle = "red";
-  for (let x = rozamientoZona.inicio; x < rozamientoZona.fin; x += 10) {
-    ctx.beginPath();
-    ctx.arc(x - offset, 212, 2, 0, Math.PI * 2);
-    ctx.fill();
+  if (modeloActual === 2) {
+    ctx.fillStyle = "red"
+    for (let x = rozamientoZona.inicio; x < rozamientoZona.fin; x += 10) {
+      ctx.beginPath()
+      ctx.arc(x - offset, 212, 2, 0, Math.PI * 2)
+      ctx.fill()
+    }
   }
 
   // Dibujar bola (ajustada por offset)
@@ -65,6 +73,12 @@ function moverBola() {
   const dt = 0.1;
   const rozamiento = 0.1;
   const posicionEnZona = bola.x > rozamientoZona.inicio && bola.x < rozamientoZona.fin;
+
+  // rozamiento solo en modelo 2
+  if (modeloActual === 2 && posicionEnZona) {
+    bola.velocidad -= rozamiento
+    if (bola.velocidad < 0) bola.velocidad = 0
+  }
 
   if (posicionEnZona) {
     bola.velocidad -= rozamiento;
@@ -91,5 +105,17 @@ btnIniciar.addEventListener("click", () => {
   cancelAnimationFrame(animacionActiva);
   animacionActiva = requestAnimationFrame(moverBola);
 });
+
+btnModelo1.addEventListener("click", () => {
+  modeloActual = 1
+  btnModelo1.style.backgroundColor = "rgb(100, 180, 255)"
+  btnModelo2.style.backgroundColor = ""
+})
+
+btnModelo2.addEventListener("click", () => {
+  modeloActual = 2
+  btnModelo2.style.backgroundColor = "rgb(100, 180, 255)"
+  btnModelo1.style.backgroundColor = ""
+})
 
 inicializar();
