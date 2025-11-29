@@ -8,24 +8,40 @@
 </head>
 <body>
   <header class="titulo">
-    <h1>Trabajo final fisica 1</h1>
+    <h1>Trabajo final Física 1</h1>
   </header>
 
   <div class="contenedor-grid">
       
-    <canvas id="canvas" class="canvas" id="simulacion" width="550" height="300"></canvas>
+    <canvas id="canvas" class="canvas" width="550" height="300"></canvas>
     
     <div class="parametros">
         <h2>Parámetros</h2>
-        <label>Masa (kg): <input type="number" id="masa" value="" min="0.1" step="0.1"></label>
-        <label>Velocidad inicial (m/s): <input type="number" id="velocidad" value="" min="0" step="0.5"></label>
-        <label>Distancia (m): <input type="number" id="distancia" value="" min="5" step="1"></label>
+
+        <label>Masa (kg): 
+          <input type="number" id="masa" min="0.1" step="0.1">
+        </label>
+
+        <label>Velocidad inicial (m/s): 
+          <input type="number" id="velocidad" min="0" step="0.5">
+        </label>
+
+        <label id="label-altura" style="display:none;">
+          Altura inicial (m):
+          <input type="number" id="altura" min="0.5" step="0.1">
+        </label>
+
+        <label id="label-distancia">
+          Distancia (m): 
+          <input type="number" id="distancia" min="5" step="1">
+        </label>
+
         <button id="iniciar">Iniciar</button>
     </div>
 
     <div class="resultados">
       <h2>Resultados</h2>
-      <p id="resultado">energia final:</p>
+      <p id="resultado">Energía final:</p>
     </div>
 
     <div class="modelos">
@@ -33,11 +49,12 @@
         <div class="eleccion-modelos">
           <button id="modelo1">Modelo 1: Sin rozamiento</button>
           <button id="modelo2">Modelo 2: Con rozamiento</button>
-          <button id="modelo3">Modelo 3: Curva </button>
-          <button>Modelo 4: </button>
+          <button id="modelo3">Modelo 3: Curva</button>
+          <button id="modelo4">Modelo 4:</button>
         </div>
     </div>
-</div>
+  </div>
+
 <script src="script.js"></script>
 </body>
 </html>

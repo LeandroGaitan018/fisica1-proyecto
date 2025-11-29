@@ -1,4 +1,4 @@
-// script.js - reemplazar completo pero manteniendo tu estructura y IDs
+// script.js
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 const resultado = document.getElementById("resultado");
@@ -6,34 +6,31 @@ const btnIniciar = document.getElementById("iniciar");
 const btnModelo1 = document.getElementById("modelo1");
 const btnModelo2 = document.getElementById("modelo2");
 const btnModelo3 = document.getElementById("modelo3");
-let tiempo = 0;
 
+const labelAltura = document.getElementById("label-altura");
+const labelDistancia = document.getElementById("label-distancia");
+
+let tiempo = 0;
 let bola, rozamientoZona, animacionActiva = null, offset = 0, modeloActual = 1;
 
-// Ajustes visuales para que la rampa sea visible en el canvas
 canvas.width = Math.max(canvas.width, 700);
 canvas.height = Math.max(canvas.height, 300);
 
-// FUNCIONES AUX
 function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
 
-// ----- Función de rampa (curva tipo Bézier aproximada via parábola) -----
+// ----- curva Bézier aproximada -----
 function curvaRampaY(x) {
-  // x en píxeles, definimos tramo de rampa de 0..rampaLargo
-  const rampaLargo = 300;      // px donde termina la curva y empieza el piso
-  const yBase = 200;           // nivel base (arriba)
-  const altura = 140;          // cuanto baja la rampa (px)
+  const rampaLargo = 300;
+  const yBase = 200;
+  const altura = 140;
 
-  if (x <= 0) return yBase - altura;               // inicio arriba
-  if (x >= rampaLargo) return yBase + 20;          // suelo (ligero offset)
-  // parábola suave: devuelve valores entre (yBase-altura) ... (yBase+20)
-  const t = x / rampaLargo; // 0..1
-  // fórmula: empieza alto, baja rápido y termina plano
-  const y = (yBase - altura) + (1 - (1 - t) * (1 - t)) * (altura + 20);
-  return y;
+  if (x <= 0) return yBase - altura;
+  if (x >= rampaLargo) return yBase + 20;
+
+  const t = x / rampaLargo;
+  return (yBase - altura) + (1 - (1 - t)*(1 - t)) * (altura + 20);
 }
 
-// para depurar la rampa: puntos
 function dibujarRampaCurva(offsetLocal = 0) {
   ctx.strokeStyle = "#999";
   ctx.lineWidth = 3;
@@ -46,13 +43,12 @@ function dibujarRampaCurva(offsetLocal = 0) {
   ctx.stroke();
 }
 
-// shinboInicializar bola 
+// ---------------- Inicializar ----------------
 function inicializar() {
+
   const masa = parseFloat(document.getElementById("masa").value) || 1;
   const velocidadIn = parseFloat(document.getElementById("velocidad").value) || 0;
   const distancia = parseFloat(document.getElementById("distancia").value) || 200;
-
-  // valores por defecto para que no se salga de pantalla
   const radio = 10;
 
   if (modeloActual === 1 || modeloActual === 2) {
@@ -68,48 +64,55 @@ function inicializar() {
       longitudTotal: distancia * 30,
       trail: []
     };
-  } else if (modeloActual === 3) {
-    // la bola comienza pegada arriba de la rampa
-      const alturaInicial = 140; // Altura máxima de la rampa
-      bola = {
-        x: 1,
-        y: curvaRampaY(1) - radio,
-        radio,
-        masa,
-        velocidad: 0,   // parte quieta arriba; se acelerará por pendiente
-        distanciaRecorrida: 0,
-        energiaInicial: masa * 9.81 * (alturaInicial / 100), // Energía potencial inicial
-        energiaFinal: 0,
-        longitudTotal: distancia * 30,
-        trail: []
-      };
-    }
-  
-  // zona de rozamiento (mantengo tus valores)
+  }
+
+  // ----------- MODELO 3: curva -------------
+  else if (modeloActual === 3) {
+
+    const altura = parseFloat(document.getElementById("altura").value) || 1;
+
+    bola = {
+      x: 1,
+      y: curvaRampaY(1) - radio,
+      radio,
+      masa,
+
+      // IGNORAR velocidad inicial → arranca quieta
+      velocidad: 0,
+
+      distanciaRecorrida: 0,
+
+      // Energía potencial inicial mgh (h en metros)
+      energiaInicial: masa * 9.81 * altura,
+      energiaFinal: 0,
+
+      longitudTotal: 600,
+      trail: []
+    };
+  }
+
   rozamientoZona = { inicio: 400, fin: 600 };
 
   offset = 0;
   resultado.textContent = "Energía final:";
-  ctx.fillStyle = "white";
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   dibujarEscena();
 }
 
+// ----------------- Dibujar -----------------
 function dibujarEscena() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // cámara simple: mantenemos la bola visible (no tocar lógica externa)
   offset = bola.x - canvas.width * 0.25;
   if (offset < 0) offset = 0;
-  if (offset > bola.longitudTotal - canvas.width) offset = bola.longitudTotal - canvas.width;
+  if (offset > bola.longitudTotal - canvas.width) 
+      offset = bola.longitudTotal - canvas.width;
 
-  // MODELO 1: suelo simple
   if (modeloActual === 1) {
     ctx.fillStyle = "rgb(151,225,248)";
     ctx.fillRect(-offset, 210, bola.longitudTotal + offset + 100, 3);
   }
 
-  // MODELO 2: suelo con puntos rojos
   else if (modeloActual === 2) {
     ctx.fillStyle = "rgb(200,180,150)";
     ctx.fillRect(-offset, 210, bola.longitudTotal + offset + 100, 3);
@@ -121,73 +124,65 @@ function dibujarEscena() {
     }
   }
 
-  // MODELO 3: rampa curva
   else if (modeloActual === 3) {
-    // dibujar rampa
     dibujarRampaCurva(offset);
-    // dibujar un tramo de suelo plano despues de la rampa (para que se vea continuidad)
+
     ctx.strokeStyle = "#666";
     ctx.lineWidth = 2;
     ctx.beginPath();
+
     const rampaLargo = 300;
     const startX = rampaLargo - offset;
     const startY = curvaRampaY(rampaLargo);
+
     ctx.moveTo(startX, startY);
     ctx.lineTo(bola.longitudTotal - offset, startY);
     ctx.stroke();
   }
 
-  bola.trail.forEach((punto, index) => {
-    const opacidad = index / bola.trail.length;
+  bola.trail.forEach((p, i) => {
+    const op = i / bola.trail.length;
+    const salto = Math.sin(tiempo + i * 0.5) * 2;
 
-    // Movimiento tipo "correr" ANIMADO
-    const salto = Math.sin(tiempo + index * 0.5) * 2;
-
-    ctx.fillStyle = `rgba(26, 124, 83, ${opacidad * 0.6})`;
+    ctx.fillStyle = `rgba(26, 124, 83, ${op * 0.6})`;
     ctx.beginPath();
-    ctx.arc(punto.x - offset, punto.y + salto, bola.radio * 0.7, 0, Math.PI * 2);
+    ctx.arc(p.x - offset, p.y + salto, bola.radio * 0.7, 0, Math.PI * 2);
     ctx.fill();
   });
 
-  // bola (ajustada por offset). Si es modelo 3, Y ya está calculada para ajustarse
   ctx.beginPath();
   ctx.fillStyle = "rgb(26,124,83)";
   ctx.arc(bola.x - offset, bola.y, bola.radio, 0, Math.PI * 2);
   ctx.fill();
 }
 
-//MOVIMIENTO 
-function moverBola(timestamp) {
+// ----------------- Movimiento -----------------
+function moverBola() {
   
   const dt = 0.1;
   const rozamiento = 0.1;
 
-  // MODELO 3: la bola sigue la curva y se acelera por pendiente
   if (modeloActual === 3) {
-    // calculamos pendiente numérica: dy/dx
+
     const dx = 1;
     const dy = curvaRampaY(bola.x + dx) - curvaRampaY(Math.max(0, bola.x - dx));
     const pendiente = dy / (2 * dx);
 
-    // ángulo y aceleración tangencial
     const ang = Math.atan(pendiente || 0);
     const g = 9.81;
-    const a = g * Math.sin(ang); // aceleración a lo largo de x
 
-    // actualizar velocidad y posición (escala para visual)
+    const a = g * Math.sin(ang);
+
     bola.velocidad += a * dt;
-    // limitador razonable para que no se dispare fuera de pantalla
     bola.velocidad = clamp(bola.velocidad, -200, 200);
 
-    bola.x += bola.velocidad * dt * 10; // escalado visual
-    // pegada a la curva (y = curvaRampaY(x) - radio)
+    bola.x += bola.velocidad * dt * 10;
     bola.y = curvaRampaY(bola.x) - bola.radio;
   }
 
-  // MODELO 2: rozamiento 
   if (modeloActual === 2) {
-    const posicionEnZona = bola.x > rozamientoZona.inicio && bola.x < rozamientoZona.fin;
-    if (posicionEnZona) {
+    const enZonaRozamiento = bola.x > rozamientoZona.inicio && bola.x < rozamientoZona.fin;
+    if (enZonaRozamiento) {
       bola.velocidad -= rozamiento;
       if (bola.velocidad < 0) bola.velocidad = 0;
     }
@@ -195,7 +190,6 @@ function moverBola(timestamp) {
     bola.distanciaRecorrida += bola.velocidad * dt;
   }
 
-  // MODELO 1: simple 
   if (modeloActual === 1) {
     bola.x += bola.velocidad * dt * 10;
     bola.distanciaRecorrida += bola.velocidad * dt;
@@ -207,21 +201,27 @@ function moverBola(timestamp) {
   if (bola.trail.length > 15) bola.trail.shift();
 
   tiempo += 0.15;
-  
-  // condición de fin
+
   if (bola.x >= bola.longitudTotal || bola.velocidad <= 0) {
-    bola.energiaFinal = 0.5 * bola.masa * bola.velocidad * bola.velocidad;
-    resultado.textContent = `Energía final: ${bola.energiaFinal.toFixed(2)} J`;
+
+    if (modeloActual === 3) {
+      resultado.textContent = 
+        `Energía final: ${bola.energiaInicial.toFixed(2)} J `;
+    } else {
+      bola.energiaFinal = 0.5 * bola.masa * bola.velocidad * bola.velocidad;
+      resultado.textContent = 
+        `Energía final: ${bola.energiaFinal.toFixed(2)} J`;
+    }
+
     cancelAnimationFrame(animacionActiva);
     animacionActiva = null;
     return;
   }
 
-  // siguiente frame
   animacionActiva = requestAnimationFrame(moverBola);
 }
 
-// ----- EVENTOS 
+// ----------------- EVENTOS -----------------
 btnIniciar.addEventListener("click", () => {
   inicializar();
   if (animacionActiva) cancelAnimationFrame(animacionActiva);
@@ -231,23 +231,28 @@ btnIniciar.addEventListener("click", () => {
 btnModelo1.addEventListener("click", () => {
   modeloActual = 1;
   btnModelo1.style.backgroundColor = "rgb(100,180,255)";
-  btnModelo2.style.backgroundColor = "";
+  labelAltura.style.display = "none";
+  labelDistancia.style.display = "block";
+  btnModelo2.style.backgroundColor = ""; 
   btnModelo3.style.backgroundColor = "";
 });
 
 btnModelo2.addEventListener("click", () => {
   modeloActual = 2;
   btnModelo2.style.backgroundColor = "rgb(100,180,255)";
-  btnModelo1.style.backgroundColor = "";
+  labelAltura.style.display = "none";
+  labelDistancia.style.display = "block";
+  btnModelo1.style.backgroundColor = ""; 
   btnModelo3.style.backgroundColor = "";
 });
 
 btnModelo3.addEventListener("click", () => {
   modeloActual = 3;
   btnModelo3.style.backgroundColor = "rgb(100,180,255)";
-  btnModelo1.style.backgroundColor = "";
+  labelAltura.style.display = "block";
+  labelDistancia.style.display = "none";
+  btnModelo1.style.backgroundColor = ""; 
   btnModelo2.style.backgroundColor = "";
 });
-
 
 inicializar();
