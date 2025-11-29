@@ -6,7 +6,7 @@ const btnIniciar = document.getElementById("iniciar");
 const btnModelo1 = document.getElementById("modelo1");
 const btnModelo2 = document.getElementById("modelo2");
 const btnModelo3 = document.getElementById("modelo3");
-
+let tiempo = 0;
 
 let bola, rozamientoZona, animacionActiva = null, offset = 0, modeloActual = 1;
 
@@ -65,7 +65,8 @@ function inicializar() {
       distanciaRecorrida: 0,
       energiaInicial: 0.5 * masa * velocidadIn * velocidadIn,
       energiaFinal: 0,
-      longitudTotal: distancia * 30
+      longitudTotal: distancia * 30,
+      trail: []
     };
   } else if (modeloActual === 3) {
     // la bola comienza pegada arriba de la rampa
@@ -79,7 +80,8 @@ function inicializar() {
         distanciaRecorrida: 0,
         energiaInicial: masa * 9.81 * (alturaInicial / 100), // Energía potencial inicial
         energiaFinal: 0,
-        longitudTotal: distancia * 30
+        longitudTotal: distancia * 30,
+        trail: []
       };
     }
   
@@ -135,6 +137,18 @@ function dibujarEscena() {
     ctx.stroke();
   }
 
+  bola.trail.forEach((punto, index) => {
+    const opacidad = index / bola.trail.length;
+
+    // Movimiento tipo "correr" ANIMADO
+    const salto = Math.sin(tiempo + index * 0.5) * 2;
+
+    ctx.fillStyle = `rgba(26, 124, 83, ${opacidad * 0.6})`;
+    ctx.beginPath();
+    ctx.arc(punto.x - offset, punto.y + salto, bola.radio * 0.7, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
   // bola (ajustada por offset). Si es modelo 3, Y ya está calculada para ajustarse
   ctx.beginPath();
   ctx.fillStyle = "rgb(26,124,83)";
@@ -189,6 +203,11 @@ function moverBola(timestamp) {
 
   dibujarEscena();
 
+  bola.trail.push({ x: bola.x, y: bola.y });
+  if (bola.trail.length > 15) bola.trail.shift();
+
+  tiempo += 0.15;
+  
   // condición de fin
   if (bola.x >= bola.longitudTotal || bola.velocidad <= 0) {
     bola.energiaFinal = 0.5 * bola.masa * bola.velocidad * bola.velocidad;
