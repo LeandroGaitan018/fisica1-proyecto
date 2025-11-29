@@ -88,6 +88,7 @@ function inicializar() {
 
   offset = 0;
   resultado.textContent = "Energía final:";
+  ctx.fillStyle = "white";
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   dibujarEscena();
 }
