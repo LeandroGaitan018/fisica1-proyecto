@@ -8,6 +8,15 @@ const btnModelo2 = document.getElementById("modelo2");
 const btnModelo3 = document.getElementById("modelo3");
 const btnModelo4 = document.getElementById("modelo4");
 
+const labelAltura = document.getElementById("label-altura");
+const labelDistancia = document.getElementById("label-distancia");
+const labelVelocidad = document.getElementById("label-velocidad");
+
+let tiempo = 0;
+let bola, rozamientoZona, animacionActiva = null, offset = 0, modeloActual = 1;
+
+canvas.width = Math.max(canvas.width, 700);
+canvas.height = Math.max(canvas.height, 300);
 
 // Elementos de energía
 const epDisplay = document.getElementById("ep")
@@ -18,7 +27,7 @@ const elostDisplay = document.getElementById("elost")
 // resorte
 let resorteCompresion = 0;     
 let resorteMaxCompresion = 50;
-let k = 0.4;  
+let k = 800;  
 
 
 function pixelsAMetros(px) { return px / 100 }
@@ -38,21 +47,20 @@ function calcularEnergiaK(velocidad) {
   return 0.5 * bola.masa * velocidad * velocidad
 }
 
-// 🔥 CORRECTO PARA CONSERVACIÓN EN MODELO 3
 function actualizarEnergia() {
-  let ep = 0, ek = 0;
+  let ep = 0, ek = 0, ee = 0;
 
-  if (modeloActual === 3) {
+  if (modeloActual === 3 || modeloActual === 4) {
     ep = calcularEnergiaP(bola.x, bola.y);
-    ek = Math.max(0, bola.energiaInicial - ep); // conservación
-  } 
-  else {
+    ek = Math.max(0, bola.energiaInicial - ep - bola.energiaElastica); // Conservación de energía
+    ee = bola.energiaElastica || 0; // Energía elástica del resorte
+  } else {
     ek = calcularEnergiaK(bola.velocidad);
   }
 
-  const et = ep + ek;
+  const et = ep + ek + ee;
 
-  const elost = modeloActual === 3 ? 0 : Math.max(0, bola.energiaInicial - et);
+  const elost = modeloActual === 3 || modeloActual === 4 ? 0 : Math.max(0, bola.energiaInicial - et);
 
   epDisplay.textContent = ep.toFixed(2) + " J";
   ekDisplay.textContent = ek.toFixed(2) + " J";
@@ -72,17 +80,6 @@ function calcularEnergiaPResorte(compresionPx) {
   // Ep = 0.5 * k * x^2
   return 0.5 * k * compresionM * compresionM;
 }
-
-
-const labelAltura = document.getElementById("label-altura");
-const labelDistancia = document.getElementById("label-distancia");
-const labelVelocidad = document.getElementById("label-velocidad");
-
-let tiempo = 0;
-let bola, rozamientoZona, animacionActiva = null, offset = 0, modeloActual = 1;
-
-canvas.width = Math.max(canvas.width, 700);
-canvas.height = Math.max(canvas.height, 300);
 
 function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
 
@@ -214,7 +211,7 @@ function inicializar() {
 
   else if (modeloActual === 4) {
     const altura = parseFloat(document.getElementById("altura").value) || 1;
-
+  
     bola = {
       x: 0,
       y: curvaRampaY(0) - radio,
@@ -222,10 +219,11 @@ function inicializar() {
       masa,
       velocidad: 0, // ignora velocidad inicial
       distanciaRecorrida: 0,
-      // energia inicial = mgh
+      // energía inicial = mgh (sin dividir entre 100)
       energiaInicial: masa * 9.81 * altura,
+      energiaElastica: 0, // El resorte aún no está comprimido
       energiaFinal: 0,
-
+  
       longitudTotal: 600,
       trail: []
     };
@@ -320,48 +318,48 @@ function moverBola() {
   const rozamiento = 0.1;
 
   if (modeloActual === 4) {
-
     const dx = 1;
     const dy = curvaRampaY(bola.x + dx) - curvaRampaY(Math.max(0, bola.x - dx));
     const pendiente = dy / (2 * dx);
-
+  
     const ang = Math.atan(pendiente || 0);
     const g = 9.81;
-
+  
     const a = g * Math.sin(ang);
-    
-    const inicioResorte = 520;
-    const largoResorte = 180;
-    const constanteK = 0.5;
-
+  
+    const inicioResorte = 520; // Posición donde comienza el resorte
+    const constanteK = 0.5; // Constante del resorte
+  
     bola.velocidad += a * dt;
-
     bola.velocidad = clamp(bola.velocidad, -200, 200);
-
+  
     bola.x += bola.velocidad * dt * 10;
     bola.y = curvaRampaY(bola.x) - bola.radio;
-
-
+  
     if (bola.x + bola.radio >= inicioResorte) {
-
-      // compresion del resorte
+      // Compresión del resorte
       const compresion = (bola.x + bola.radio) - inicioResorte;
-
+  
       if (compresion > 0) {
-
-        // fuerza resorte para atrás
+        // Energía elástica almacenada en el resorte
+        bola.energiaElastica = 0.5 * constanteK * compresion * compresion;
+  
+        // Fuerza del resorte hacia atrás
         const F_resorte = -constanteK * compresion;
-
-        // aceleracion por la fuerza
+  
+        // Aceleración por la fuerza del resorte
         const a_resorte = F_resorte / bola.masa;
-
+  
         bola.velocidad += a_resorte * dt * 10;
-
-        // comprimir
+  
+        // Actualizar posición de la bola
         bola.x = inicioResorte - bola.radio + (bola.velocidad * dt * 5);
-
-        // y en la rampa
+  
+        // Asegurar que la bola siga la curva
         bola.y = curvaRampaY(bola.x) - bola.radio;
+  
+        // Transferir energía elástica a cinética
+        bola.energiaElastica = 0; // El resorte se descarga
       }
     }
   }
