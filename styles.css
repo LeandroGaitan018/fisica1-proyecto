@@ -92,6 +92,11 @@ input{
   .energia-box.cinetica {
     border-left-color: #4ecdc4;
   }
+
+  .energia-box.elastica {
+    border-left-color: #4ecdc4;
+  }
+  
   
   .energia-box.total {
     border-left-color: #45b7d1;

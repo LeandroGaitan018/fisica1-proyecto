@@ -22,12 +22,13 @@ canvas.height = Math.max(canvas.height, 300);
 const epDisplay = document.getElementById("ep")
 const ekDisplay = document.getElementById("ek")
 const etDisplay = document.getElementById("et")
+const eeDisplay = document.getElementById("ee")
 const elostDisplay = document.getElementById("elost")
 
 // resorte
 let resorteCompresion = 0;     
 let resorteMaxCompresion = 50;
-let k = 800;  
+let k = 0.5;  
 
 
 function pixelsAMetros(px) { return px / 100 }
@@ -65,6 +66,7 @@ function actualizarEnergia() {
   epDisplay.textContent = ep.toFixed(2) + " J";
   ekDisplay.textContent = ek.toFixed(2) + " J";
   etDisplay.textContent = et.toFixed(2) + " J";
+  eeDisplay.textContent = ee.toFixed(2) + " J";
   elostDisplay.textContent = elost.toFixed(2) + " J";
 }
 
@@ -328,7 +330,7 @@ function moverBola() {
     const a = g * Math.sin(ang);
   
     const inicioResorte = 520; // Posición donde comienza el resorte
-    const constanteK = 0.5; // Constante del resorte
+    const constanteK = 3; // Constante del resorte
   
     bola.velocidad += a * dt;
     bola.velocidad = clamp(bola.velocidad, -200, 200);
@@ -351,15 +353,12 @@ function moverBola() {
         const a_resorte = F_resorte / bola.masa;
   
         bola.velocidad += a_resorte * dt * 10;
-  
-        // Actualizar posición de la bola
-        bola.x = inicioResorte - bola.radio + (bola.velocidad * dt * 5);
+
+        bola.x += bola.velocidad * dt * 10;
   
         // Asegurar que la bola siga la curva
         bola.y = curvaRampaY(bola.x) - bola.radio;
   
-        // Transferir energía elástica a cinética
-        bola.energiaElastica = 0; // El resorte se descarga
       }
     }
   }
@@ -405,7 +404,7 @@ function moverBola() {
 
   tiempo += 0.15;
 
-  if (bola.x >= bola.longitudTotal || bola.velocidad <= 0) {
+  if (bola.x >= bola.longitudTotal) { // se sacó velocidad no puede ser negativa.
 
     if (modeloActual === 3) {
 
