@@ -7,6 +7,7 @@ const btnModelo1 = document.getElementById("modelo1");
 const btnModelo2 = document.getElementById("modelo2");
 const btnModelo3 = document.getElementById("modelo3");
 const btnModelo4 = document.getElementById("modelo4");
+const btnModelo5 = document.getElementById("modelo5");
 
 const labelAltura = document.getElementById("label-altura");
 const labelDistancia = document.getElementById("label-distancia");
@@ -231,6 +232,30 @@ function inicializar() {
     };
   }
 
+  else if (modeloActual === 5) {
+    const distancia = parseFloat(document.getElementById("distancia").value) || 200;
+    const masa = parseFloat(document.getElementById("masa").value) || 1;
+    const velocidadIn = parseFloat(document.getElementById("velocidad").value) || 0;
+    const radio = 10;
+
+    bola = {
+      x: 11,
+      y: 200,
+      radio,
+      masa,
+      velocidad: velocidadIn,
+      distanciaRecorrida: 0,
+      energiaInicial: 0.5 * masa * velocidadIn * velocidadIn,
+      energiaElastica: 0,
+      longitudTotal: distancia * 30,
+      trail: []
+    };
+
+    // zona de rozamiento igual que modelo 2
+    rozamientoZona = { inicio: 400, fin: 600 };
+  }
+
+
   rozamientoZona = { inicio: 400, fin: 600 };
 
   offset = 0;
@@ -305,6 +330,43 @@ function dibujarEscena() {
     ctx.stroke();
   }
 
+  else if (modeloActual === 5) {
+    // suelo igual modelo 2
+    ctx.fillStyle = "rgb(200,180,150)";
+    ctx.fillRect(-offset, 210, bola.longitudTotal + offset + 100, 3);
+
+    // dibujar zona de rozamiento
+    ctx.fillStyle = "red";
+    for (let x = rozamientoZona.inicio; x < rozamientoZona.fin; x += 12) {
+      ctx.beginPath();
+      ctx.arc(x - offset, 212, 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // DIBUJAR RESORTE FINAL IGUAL AL MODELO 4
+    let xFinal = bola.longitudTotal - 80 - offset; 
+    let yFinal = 200 - 15;
+
+    const largoResorte = 80;
+    const zigZags = 10;
+    const amplitud = 10;
+    const paso = largoResorte / zigZags;
+
+    ctx.beginPath();
+    ctx.strokeStyle = "red";
+    ctx.lineWidth = 3;
+    ctx.moveTo(xFinal, yFinal);
+
+    for (let i = 1; i <= zigZags; i++) {
+      const x = xFinal + paso * i;
+      const y = yFinal + (i % 2 === 0 ? -amplitud : amplitud);
+      ctx.lineTo(x, y);
+    }
+
+    ctx.stroke();
+  }
+
+
   bola.trail.forEach((p, i) => {
     const op = i / bola.trail.length;
     const salto = Math.sin(tiempo + i * 0.5) * 2;
@@ -326,6 +388,59 @@ function moverBola() {
   
   const dt = 0.1;
   const rozamiento = 0.1;
+
+  if (modeloActual === 5) {
+    const dt = 0.1;
+    const rozamiento = 0.1;
+
+    // --- ROZAMIENTO COMO MODELO 2 ---
+    const enZonaRoz = bola.x > rozamientoZona.inicio && bola.x < rozamientoZona.fin;
+    const f = rozamiento * 9;
+
+    if (enZonaRoz){
+      if (bola.velocidad > 0) {
+        bola.velocidad -= rozamiento;
+      } else if (bola.velocidad < 0) {
+        bola.velocidad += rozamiento; 
+      }
+    }
+
+    // --- DESPLAZAMIENTO GENERAL ---
+    bola.x += bola.velocidad * dt * 10;
+
+    // --- RESORTE ---
+    const inicioResorte = bola.longitudTotal - 80; // donde empieza el resorte
+    const k = 150; // constante del resorte, ajustable
+
+    if (bola.x + bola.radio >= inicioResorte) {
+
+        // compresión REAL en metros
+        let compresionPx = (bola.x + bola.radio) - inicioResorte;
+        let compresion = compresionPx / 100; 
+
+        // energía elástica acumulada
+        bola.energiaElastica = 0.5 * k * compresion * compresion;
+
+        // fuerza F = -kx
+        const F_resorte = -k * compresion;
+
+        // aceleración
+        const a_resorte = F_resorte / bola.masa;
+
+        // actualizar velocidad
+        bola.velocidad += a_resorte * dt * 10;
+
+        const maxCompresionPx = 40;   // hasta dónde dejamos hundirse
+
+        if (compresionPx > maxCompresionPx) {
+            compresionPx = maxCompresionPx;
+            bola.x = inicioResorte - bola.radio + maxCompresionPx;
+        }
+    }
+  }
+
+
+
 
   if (modeloActual === 4) {
     const dx = 1;
@@ -496,6 +611,19 @@ btnModelo4.addEventListener("click", () => {
   btnModelo2.style.backgroundColor = "";
   btnModelo3.style.backgroundColor = "";
 });
+
+btnModelo5.addEventListener("click", () => {
+  modeloActual = 5;
+  btnModelo5.style.backgroundColor = "rgb(100,180,255)";
+  labelAltura.style.display = "none";
+  labelVelocidad.style.display = "block";
+  labelDistancia.style.display = "block";
+  btnModelo1.style.backgroundColor = ""; 
+  btnModelo2.style.backgroundColor = "";
+  btnModelo3.style.backgroundColor = "";
+  btnModelo4.style.backgroundColor = "";
+});
+
 
 btnModelo1.classList.add("activo")
 inicializar();
