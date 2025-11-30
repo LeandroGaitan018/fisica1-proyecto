@@ -7,8 +7,56 @@ const btnModelo1 = document.getElementById("modelo1");
 const btnModelo2 = document.getElementById("modelo2");
 const btnModelo3 = document.getElementById("modelo3");
 
+
+// Elementos de energía
+const epDisplay = document.getElementById("ep")
+const ekDisplay = document.getElementById("ek")
+const etDisplay = document.getElementById("et")
+const elostDisplay = document.getElementById("elost")
+
+function pixelsAMetros(px) { return px / 100 }
+
+function calcularEnergiaP(x, y) {
+  if (modeloActual !== 3) return 0
+
+  const alturaReferencia = 250
+  const alturaActual = alturaReferencia - y
+  const h = pixelsAMetros(alturaActual)
+  const g = 9.81
+
+  return bola.masa * g * Math.max(0, h)
+}
+
+function calcularEnergiaK(velocidad) {
+  return 0.5 * bola.masa * velocidad * velocidad
+}
+
+// 🔥 CORRECTO PARA CONSERVACIÓN EN MODELO 3
+function actualizarEnergia() {
+  let ep = 0, ek = 0;
+
+  if (modeloActual === 3) {
+    ep = calcularEnergiaP(bola.x, bola.y);
+    ek = Math.max(0, bola.energiaInicial - ep); // conservación
+  } 
+  else {
+    ek = calcularEnergiaK(bola.velocidad);
+  }
+
+  const et = ep + ek;
+
+  const elost = modeloActual === 3 ? 0 : Math.max(0, bola.energiaInicial - et);
+
+  epDisplay.textContent = ep.toFixed(2) + " J";
+  ekDisplay.textContent = ek.toFixed(2) + " J";
+  etDisplay.textContent = et.toFixed(2) + " J";
+  elostDisplay.textContent = elost.toFixed(2) + " J";
+}
+
+
 const labelAltura = document.getElementById("label-altura");
 const labelDistancia = document.getElementById("label-distancia");
+const labelVelocidad = document.getElementById("label-velocidad");
 
 let tiempo = 0;
 let bola, rozamientoZona, animacionActiva = null, offset = 0, modeloActual = 1;
@@ -68,21 +116,16 @@ function inicializar() {
 
   // ----------- MODELO 3: curva -------------
   else if (modeloActual === 3) {
-
     const altura = parseFloat(document.getElementById("altura").value) || 1;
 
     bola = {
-      x: 1,
-      y: curvaRampaY(1) - radio,
+      x: 0,
+      y: curvaRampaY(0) - radio,
       radio,
       masa,
-
-      // IGNORAR velocidad inicial → arranca quieta
-      velocidad: 0,
-
+      velocidad: 0, // ignora velocidad inicial
       distanciaRecorrida: 0,
-
-      // Energía potencial inicial mgh (h en metros)
+      // energia inicial = mgh
       energiaInicial: masa * 9.81 * altura,
       energiaFinal: 0,
 
@@ -196,6 +239,7 @@ function moverBola() {
   }
 
   dibujarEscena();
+  actualizarEnergia()
 
   bola.trail.push({ x: bola.x, y: bola.y });
   if (bola.trail.length > 15) bola.trail.shift();
@@ -205,9 +249,21 @@ function moverBola() {
   if (bola.x >= bola.longitudTotal || bola.velocidad <= 0) {
 
     if (modeloActual === 3) {
-      resultado.textContent = 
-        `Energía final: ${bola.energiaInicial.toFixed(2)} J `;
+
+      
+      const vFinal = Math.sqrt((2 * bola.energiaInicial) / bola.masa);
+      // Forzar Ep final = 0
+      epDisplay.textContent = "0.00 J";
+      ekDisplay.textContent = bola.energiaInicial.toFixed(2) + " J";
+      etDisplay.textContent = bola.energiaInicial.toFixed(2) + " J";
+      elostDisplay.textContent = "0.00 J";
+
+
+      resultado.textContent =
+        `Energía final: ${bola.energiaInicial.toFixed(2)} J ——— Velocidad final: ${vFinal.toFixed(2)} m/s`;
+
     } else {
+
       bola.energiaFinal = 0.5 * bola.masa * bola.velocidad * bola.velocidad;
       resultado.textContent = 
         `Energía final: ${bola.energiaFinal.toFixed(2)} J`;
@@ -250,9 +306,11 @@ btnModelo3.addEventListener("click", () => {
   modeloActual = 3;
   btnModelo3.style.backgroundColor = "rgb(100,180,255)";
   labelAltura.style.display = "block";
+  labelVelocidad.style.display = "none";
   labelDistancia.style.display = "none";
   btnModelo1.style.backgroundColor = ""; 
   btnModelo2.style.backgroundColor = "";
 });
 
+btnModelo1.classList.add("activo")
 inicializar();

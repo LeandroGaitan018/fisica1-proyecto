@@ -13,27 +13,27 @@
 
   <div class="contenedor-grid">
       
-    <canvas id="canvas" class="canvas" width="550" height="300"></canvas>
+    <canvas id="canvas" class="canvas" width="500" height="300"></canvas>
     
     <div class="parametros">
         <h2>Parámetros</h2>
 
         <label>Masa (kg): 
-          <input type="number" id="masa" min="0.1" step="0.1">
+          <input type="number" id="masa">
         </label>
 
-        <label>Velocidad inicial (m/s): 
-          <input type="number" id="velocidad" min="0" step="0.5">
+        <label id="label-velocidadh">Velocidad inicial (m/s): 
+          <input type="number" id="velocidad">
         </label>
 
         <label id="label-altura" style="display:none;">
           Altura inicial (m):
-          <input type="number" id="altura" min="0.5" step="0.1">
+          <input type="number" id="altura"">
         </label>
 
         <label id="label-distancia">
           Distancia (m): 
-          <input type="number" id="distancia" min="5" step="1">
+          <input type="number" id="distancia"">
         </label>
 
         <button id="iniciar">Iniciar</button>
@@ -42,6 +42,22 @@
     <div class="resultados">
       <h2>Resultados</h2>
       <p id="resultado">Energía final:</p>
+      <div class="energia-box potencial">
+        <h3>Energía Potencial</h3>
+        <p id="ep">0.00 J</p>
+    </div>
+    <div class="energia-box cinetica">
+        <h3>Energía Cinética</h3>
+        <p id="ek">0.00 J</p>
+    </div>
+    <div class="energia-box total">
+        <h3>Energía Total</h3>
+        <p id="et">0.00 J</p>
+    </div>
+    <div class="energia-box perdida">
+        <h3>Energía Perdida</h3>
+        <p id="elost">0.00 J</p>
+    </div>
     </div>
 
     <div class="modelos">

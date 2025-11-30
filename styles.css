@@ -67,6 +67,11 @@ label, p{
    
 }
 
+h3{
+    color:#941c1c;
+    border-radius: 2em solid black;
+}
+
 input{
 
     width: 7em;
@@ -80,6 +85,37 @@ input{
     background-color: rgb(201, 27, 65);
 }
 
+.energia-box.potencial {
+    border-left-color: #ff6b6b;
+  }
+  
+  .energia-box.cinetica {
+    border-left-color: #4ecdc4;
+  }
+  
+  .energia-box.total {
+    border-left-color: #45b7d1;
+  }
+  
+  .energia-box.perdida {
+    border-left-color: #f7b731;
+  }
+  
+  .energia-box h3 {
+    margin: 0 0 8px 0;
+    font-size: 12px;
+    color: #666;
+    text-transform: uppercase;
+  }
+  
+  .energia-box p {
+    margin: 0;
+    font-size: 18px;
+    font-weight: bold;
+    color: #333;
+  }
+
+
 .modelos{
     
     grid-row: 2;
@@ -91,3 +127,7 @@ input{
     gap: 1em;
     justify-content: space-between;
 }
+
+button:hover {
+    opacity: 0.8;
+  }
