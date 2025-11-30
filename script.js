@@ -6,6 +6,7 @@ const btnIniciar = document.getElementById("iniciar");
 const btnModelo1 = document.getElementById("modelo1");
 const btnModelo2 = document.getElementById("modelo2");
 const btnModelo3 = document.getElementById("modelo3");
+const btnModelo4 = document.getElementById("modelo4");
 
 
 // Elementos de energía
@@ -13,6 +14,12 @@ const epDisplay = document.getElementById("ep")
 const ekDisplay = document.getElementById("ek")
 const etDisplay = document.getElementById("et")
 const elostDisplay = document.getElementById("elost")
+
+// resorte
+let resorteCompresion = 0;     
+let resorteMaxCompresion = 50;
+let k = 0.4;  
+
 
 function pixelsAMetros(px) { return px / 100 }
 
@@ -54,6 +61,19 @@ function actualizarEnergia() {
 }
 
 
+// ENERGIA RESODRTE
+
+function calcularEnergiaPResorte(compresionPx) {
+  if (compresionPx <= 0) return 0;
+    
+  // x debe estar en metros
+  const compresionM = pixelsAMetros(compresionPx);
+    
+  // Ep = 0.5 * k * x^2
+  return 0.5 * k * compresionM * compresionM;
+}
+
+
 const labelAltura = document.getElementById("label-altura");
 const labelDistancia = document.getElementById("label-distancia");
 const labelVelocidad = document.getElementById("label-velocidad");
@@ -90,6 +110,64 @@ function dibujarRampaCurva(offsetLocal = 0) {
   }
   ctx.stroke();
 }
+
+function dibujarRampaCurvaResorte(offsetLocal = 0) {
+  // --- DIBUJAR CURVA ---
+  ctx.strokeStyle = "#999";
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+
+  let ultimoX = 0;
+  let ultimoY = 0;
+
+  for (let px = 0; px <= 600; px += 2) {
+    let y = curvaRampaY(px);
+
+    // Si tu función devolvió NaN, ponemos un valor de fallback
+    if (isNaN(y)) y = 300;
+
+    const xReal = px - offsetLocal;
+
+    if (px === 0) ctx.moveTo(xReal, y);
+    else ctx.lineTo(xReal, y);
+
+    // guardamos el final real de la curva
+    if (px === 600) {
+      ultimoX = xReal;
+      ultimoY = y;
+    }
+  }
+
+  ctx.stroke();
+
+  // --- DIBUJAR RESORTE ---
+  let xFinal = 520 - offsetLocal;
+  let yFinal = curvaRampaY(600) -15;
+
+  // límite del canvas
+  if (xFinal > canvas.width) xFinal = canvas.width - 1;
+  if (xFinal < 0) xFinal = 0;
+
+  const largoResorte = 80;
+  const zigZags = 10;
+  const amplitud = 10;
+  const paso = largoResorte / zigZags;
+
+  ctx.beginPath();
+  ctx.strokeStyle = "red";
+  ctx.lineWidth = 3;
+
+  ctx.moveTo(xFinal, yFinal);
+
+  for (let i = 1; i <= zigZags; i++) {
+    const x = xFinal + paso * i;
+    const y = yFinal + (i % 2 === 0 ? -amplitud : amplitud);
+    ctx.lineTo(x, y);
+  }
+
+  ctx.stroke();
+}
+
 
 // ---------------- Inicializar ----------------
 function inicializar() {
@@ -134,6 +212,25 @@ function inicializar() {
     };
   }
 
+  else if (modeloActual === 4) {
+    const altura = parseFloat(document.getElementById("altura").value) || 1;
+
+    bola = {
+      x: 0,
+      y: curvaRampaY(0) - radio,
+      radio,
+      masa,
+      velocidad: 0, // ignora velocidad inicial
+      distanciaRecorrida: 0,
+      // energia inicial = mgh
+      energiaInicial: masa * 9.81 * altura,
+      energiaFinal: 0,
+
+      longitudTotal: 600,
+      trail: []
+    };
+  }
+
   rozamientoZona = { inicio: 400, fin: 600 };
 
   offset = 0;
@@ -141,6 +238,7 @@ function inicializar() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   dibujarEscena();
 }
+
 
 // ----------------- Dibujar -----------------
 function dibujarEscena() {
@@ -183,6 +281,22 @@ function dibujarEscena() {
     ctx.stroke();
   }
 
+  else if (modeloActual === 4) {
+    dibujarRampaCurvaResorte(offset);
+
+    ctx.strokeStyle = "#666";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+
+    const rampaLargo = 300;
+    const startX = rampaLargo - offset;
+    const startY = curvaRampaY(rampaLargo);
+
+    ctx.moveTo(startX, startY);
+    ctx.lineTo(bola.longitudTotal - offset, startY);
+    ctx.stroke();
+  }
+
   bola.trail.forEach((p, i) => {
     const op = i / bola.trail.length;
     const salto = Math.sin(tiempo + i * 0.5) * 2;
@@ -204,6 +318,53 @@ function moverBola() {
   
   const dt = 0.1;
   const rozamiento = 0.1;
+
+  if (modeloActual === 4) {
+
+    const dx = 1;
+    const dy = curvaRampaY(bola.x + dx) - curvaRampaY(Math.max(0, bola.x - dx));
+    const pendiente = dy / (2 * dx);
+
+    const ang = Math.atan(pendiente || 0);
+    const g = 9.81;
+
+    const a = g * Math.sin(ang);
+    
+    const inicioResorte = 520;
+    const largoResorte = 180;
+    const constanteK = 0.5;
+
+    bola.velocidad += a * dt;
+
+    bola.velocidad = clamp(bola.velocidad, -200, 200);
+
+    bola.x += bola.velocidad * dt * 10;
+    bola.y = curvaRampaY(bola.x) - bola.radio;
+
+
+    if (bola.x + bola.radio >= inicioResorte) {
+
+      // compresion del resorte
+      const compresion = (bola.x + bola.radio) - inicioResorte;
+
+      if (compresion > 0) {
+
+        // fuerza resorte para atrás
+        const F_resorte = -constanteK * compresion;
+
+        // aceleracion por la fuerza
+        const a_resorte = F_resorte / bola.masa;
+
+        bola.velocidad += a_resorte * dt * 10;
+
+        // comprimir
+        bola.x = inicioResorte - bola.radio + (bola.velocidad * dt * 5);
+
+        // y en la rampa
+        bola.y = curvaRampaY(bola.x) - bola.radio;
+      }
+    }
+  }
 
   if (modeloActual === 3) {
 
@@ -310,6 +471,17 @@ btnModelo3.addEventListener("click", () => {
   labelDistancia.style.display = "none";
   btnModelo1.style.backgroundColor = ""; 
   btnModelo2.style.backgroundColor = "";
+});
+
+btnModelo4.addEventListener("click", () => {
+  modeloActual = 4;
+  btnModelo4.style.backgroundColor = "rgb(100,180,255)";
+  labelAltura.style.display = "block";
+  labelVelocidad.style.display = "none";
+  labelDistancia.style.display = "none";
+  btnModelo1.style.backgroundColor = ""; 
+  btnModelo2.style.backgroundColor = "";
+  btnModelo3.style.backgroundColor = "";
 });
 
 btnModelo1.classList.add("activo")
