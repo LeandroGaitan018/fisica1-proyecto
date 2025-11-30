@@ -294,6 +294,14 @@ function dibujarEscena() {
 
     ctx.moveTo(startX, startY);
     ctx.lineTo(bola.longitudTotal - offset, startY);
+
+    ctx.fillStyle = "red";
+    for (let x = rozamientoZona.inicio - 100; x < rozamientoZona.fin- 100; x += 12) {
+      ctx.beginPath();
+      ctx.arc(x - offset, startY + 2, 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
     ctx.stroke();
   }
 
@@ -358,7 +366,12 @@ function moverBola() {
   
         // Asegurar que la bola siga la curva
         bola.y = curvaRampaY(bola.x) - bola.radio;
-  
+      
+        const enZonaRoz = bola.x > rozamientoZona.inicio && bola.x < rozamientoZona.fin;
+        if (enZonaRoz && bola.y >= curvaRampaY(300) - bola.radio - 1) {  
+            bola.velocidad -= rozamiento;
+            if (bola.velocidad < -0.5) bola.velocidad = -0.5; // deja rebote leve pero no infinito
+        }
       }
     }
   }
