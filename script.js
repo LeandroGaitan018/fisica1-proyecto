@@ -452,6 +452,7 @@ btnModelo1.addEventListener("click", () => {
   labelDistancia.style.display = "block";
   btnModelo2.style.backgroundColor = ""; 
   btnModelo3.style.backgroundColor = "";
+  btnModelo4.style.backgroundColor = "";
 });
 
 btnModelo2.addEventListener("click", () => {
@@ -461,6 +462,7 @@ btnModelo2.addEventListener("click", () => {
   labelDistancia.style.display = "block";
   btnModelo1.style.backgroundColor = ""; 
   btnModelo3.style.backgroundColor = "";
+  btnModelo4.style.backgroundColor = "";
 });
 
 btnModelo3.addEventListener("click", () => {
@@ -471,6 +473,7 @@ btnModelo3.addEventListener("click", () => {
   labelDistancia.style.display = "none";
   btnModelo1.style.backgroundColor = ""; 
   btnModelo2.style.backgroundColor = "";
+  btnModelo4.style.backgroundColor = "";
 });
 
 btnModelo4.addEventListener("click", () => {
