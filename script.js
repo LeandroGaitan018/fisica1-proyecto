@@ -74,6 +74,11 @@ function calcularEnergiaK(velocidad) {
 function actualizarEnergia() {
     let ep = 0, ek = 0, ee = 0;
 
+    if (bola.velocidad === 0) {
+      ekDisplay.textContent = "0.00 J";
+      return;
+    }
+
     // Si estamos mostrando la transferencia visual en modelo 5 -> forzamos la UI
     if (modeloActual === 5 && mostrarTransferencia) {
         ep = 0;
@@ -106,7 +111,7 @@ function actualizarEnergia() {
         if (bola.y + bola.radio < pisoY - 1) {
             ek = 0;
         } else {
-            ek = bola.energiaInicial - ep - ee;
+            ek = bola.energiaInicial - ep - ee - (bola.energiaPerdida || 0);
         }
         if (ek < 0) ek = 0;
     }
@@ -545,11 +550,18 @@ function moverBola() {
             bola.y = pisoY - bola.radio;
         }
 
+        if (bola.x > rozamientoZona.fin && bola.x + bola.radio < 520) {
+          bola.energiaElastica = 0;
+        }
+
         if (bola.x > rozamientoZona.inicio && bola.x < rozamientoZona.fin) {
             // acumulamos pérdida causada por esta reducción (similar a model 2/5)
             const vAntes = bola.velocidad;
             if (bola.velocidad > 0) bola.velocidad -= 0.1;
             else bola.velocidad += 0.1;
+            if (Math.abs(bola.velocidad) <= 0.1) {
+              bola.velocidad = 0
+            }
             const vDespues = bola.velocidad;
             const dE = 0.5 * bola.masa * (vAntes * vAntes - vDespues * vDespues);
             if (dE > 0) {
@@ -687,6 +699,14 @@ function moverBola() {
     animacionActiva = requestAnimationFrame(moverBola);
 }
 
+
+function resetParametrosUI() {
+    labelAltura.style.display = "block";
+    labelVelocidad.style.display = "block";
+    labelDistancia.style.display = "block";
+}
+
+
 // ----------------- EVENTOS -----------------
 btnIniciar.addEventListener("click", () => {
     inicializar();
@@ -695,6 +715,8 @@ btnIniciar.addEventListener("click", () => {
 });
 
 btnModelo1.addEventListener("click", () => {
+    resetParametrosUI()
+
     modeloActual = 1;
     btnModelo1.style.backgroundColor = "rgb(100,180,255)";
     labelAltura.style.display = "none";
@@ -704,9 +726,14 @@ btnModelo1.addEventListener("click", () => {
     btnModelo3.style.backgroundColor = "";
     btnModelo4.style.backgroundColor = "";
     btnModelo5.style.backgroundColor = "";
+
+    inicializar();   // coloca bola y valores iniciales
+    dibujarMapa(); 
 });
 
 btnModelo2.addEventListener("click", () => {
+    resetParametrosUI()
+
     modeloActual = 2;
     btnModelo2.style.backgroundColor = "rgb(100,180,255)";
     labelAltura.style.display = "none";
@@ -716,9 +743,14 @@ btnModelo2.addEventListener("click", () => {
     btnModelo3.style.backgroundColor = "";
     btnModelo4.style.backgroundColor = "";
     btnModelo5.style.backgroundColor = "";
+
+    inicializar();   // coloca bola y valores iniciales
+    dibujarMapa(); 
 });
 
 btnModelo3.addEventListener("click", () => {
+    resetParametrosUI()
+
     modeloActual = 3;
     btnModelo3.style.backgroundColor = "rgb(100,180,255)";
     labelAltura.style.display = "block";
@@ -729,9 +761,14 @@ btnModelo3.addEventListener("click", () => {
     btnModelo2.style.backgroundColor = "";
     btnModelo4.style.backgroundColor = "";
     btnModelo5.style.backgroundColor = "";
+
+    inicializar();   // coloca bola y valores iniciales
+    dibujarMapa(); 
 });
 
 btnModelo4.addEventListener("click", () => {
+    resetParametrosUI()
+
     modeloActual = 4;
     btnModelo4.style.backgroundColor = "rgb(100,180,255)";
     labelAltura.style.display = "block";
@@ -742,9 +779,14 @@ btnModelo4.addEventListener("click", () => {
     btnModelo2.style.backgroundColor = "";
     btnModelo3.style.backgroundColor = "";
     btnModelo5.style.backgroundColor = "";
+
+    inicializar();   // coloca bola y valores iniciales
+    dibujarMapa(); 
 });
 
 btnModelo5.addEventListener("click", () => {
+    resetParametrosUI()
+
     modeloActual = 5;
     btnModelo5.style.backgroundColor = "rgb(100,180,255)";
     labelAltura.style.display = "none";
@@ -755,6 +797,9 @@ btnModelo5.addEventListener("click", () => {
     btnModelo2.style.backgroundColor = "";
     btnModelo3.style.backgroundColor = "";
     btnModelo4.style.backgroundColor = "";
+
+    inicializar();   // coloca bola y valores iniciales
+    dibujarMapa(); 
 });
 
 btnModelo1.classList.add("activo");
