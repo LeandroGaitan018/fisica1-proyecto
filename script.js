@@ -13,11 +13,15 @@ const labelAltura = document.getElementById("label-altura");
 const labelDistancia = document.getElementById("label-distancia");
 const labelVelocidad = document.getElementById("label-velocidad");
 
+
 let tiempo = 0;
 let bola, rozamientoZona, animacionActiva = null, offset = 0, modeloActual = 1;
 
 canvas.width = Math.max(canvas.width, 700);
 canvas.height = Math.max(canvas.height, 300);
+
+// constante del piso visual (coincide con el fillRect que dibuja la "línea")
+const PISO_Y = 210;
 
 // Elementos de energía
 const epDisplay = document.getElementById("ep")
@@ -26,10 +30,21 @@ const etDisplay = document.getElementById("et")
 const eeDisplay = document.getElementById("ee")
 const elostDisplay = document.getElementById("elost")
 
-// resorte
+// resorte / flags visuales
 let resorteCompresion = 0;
 let resorteMaxCompresion = 50;
 let k = 0.5;
+let entroAlResorte = false;
+let velocidadEntradaResorte = 0;
+let saliendoDelResorte = false;
+
+// visual transfer flags (se usan solo para la UI, no para frenar la física)
+let mostrarTransferencia = false;
+let framesTransferencia = 0;
+let energiaCineticaAntes = 0;
+
+// tolerancia para considerar "cero" energía/velocidad
+const EPS = 1e-3;
 
 function pixelsAMetros(px) {
     return px / 100
@@ -59,6 +74,22 @@ function calcularEnergiaK(velocidad) {
 function actualizarEnergia() {
     let ep = 0, ek = 0, ee = 0;
 
+    // Si estamos mostrando la transferencia visual en modelo 5 -> forzamos la UI
+    if (modeloActual === 5 && mostrarTransferencia) {
+        ep = 0;
+        ek = 0; // mostrado como 0 por 1 frame
+        ee = energiaCineticaAntes || 0;
+        const et = ep + ek + ee;
+        const elost = 0;
+
+        epDisplay.textContent = ep.toFixed(2) + " J";
+        ekDisplay.textContent = ek.toFixed(2) + " J";
+        etDisplay.textContent = et.toFixed(2) + " J";
+        eeDisplay.textContent = ee.toFixed(2) + " J";
+        elostDisplay.textContent = elost.toFixed(2) + " J";
+        return;
+    }
+
     if (modeloActual === 3) {
         ep = calcularEnergiaP(bola.x, bola.y);
         ek = bola.energiaInicial - ep;
@@ -80,15 +111,24 @@ function actualizarEnergia() {
         if (ek < 0) ek = 0;
     }
 
-    if (modeloActual === 1 || modeloActual === 2 ||modeloActual===5) {
+    if (modeloActual === 1 || modeloActual === 2 || modeloActual === 5) {
         ek = calcularEnergiaK(bola.velocidad);
     }
 
     const et = ep + ek + ee;
     let elost = 0;
 
+    // base: pérdidas acumuladas por rozamiento (si están presentes)
+    elost += (bola.energiaPerdida || 0);
+
+    // además, si tenemos un estado con energiaInicial conocida (modelos 2 y 4),
+    // puede haber otra diferencia entre la energía inicial y la suma actual que
+    // no esté registrada en energiaPerdida (p. ej. modelado idealizado).
     if (modeloActual === 2 || modeloActual === 4) {
-        elost = Math.max(0, bola.energiaInicial - (ep + ek + ee));
+        const diferencia = Math.max(0, (bola.energiaInicial || 0) - (ep + ek + ee));
+        // evitamos doble contarlo: restamos lo que ya acumulamos por rozamiento
+        const extra = Math.max(0, diferencia - (bola.energiaPerdida || 0));
+        elost += extra;
     }
 
     epDisplay.textContent = ep.toFixed(2) + " J";
@@ -186,13 +226,14 @@ function inicializar() {
 
     if (modeloActual === 1 || modeloActual === 2) {
         bola = {
-            x: 11, y: 200, radio, masa,
+            x: 11, y: PISO_Y - radio, radio, masa,
             velocidad: velocidadIn,
             distanciaRecorrida: 0,
             energiaInicial: 0.5 * masa * velocidadIn * velocidadIn,
             energiaFinal: 0,
             longitudTotal: distancia * 30,
-            trail: []
+            trail: [],
+            energiaPerdida: 0
         };
     }
 
@@ -208,7 +249,8 @@ function inicializar() {
             energiaInicial: masa * 9.81 * altura,
             energiaFinal: 0,
             longitudTotal: 600,
-            trail: []
+            trail: [],
+            energiaPerdida: 0
         };
     }
 
@@ -223,7 +265,8 @@ function inicializar() {
             energiaInicial: masa * 9.81 * altura,
             energiaElastica: 0,
             longitudTotal: 600,
-            trail: []
+            trail: [],
+            energiaPerdida: 0
         };
     }
 
@@ -233,19 +276,32 @@ function inicializar() {
         const velocidadIn = parseFloat(document.getElementById("velocidad").value) || 0;
 
         bola = {
-            x: 11, y: 200, radio, masa,
+            x: 11, y: PISO_Y - radio, radio, masa,
             velocidad: velocidadIn,
             distanciaRecorrida: 0,
             energiaInicial: 0.5 * masa * velocidadIn * velocidadIn,
             energiaElastica: 0,
             longitudTotal: distancia * 30,
-            trail: []
+            trail: [],
+            inResorte: false,                // si está interactuando con el resorte
+            energiaEnResorteTotal: 0,        // energía total "retenida" por el sistema resorte+bola al entrar
+            prevCompresionPx: 0,
+            ultimaEnergiaTotal: 0,
+            energiaPerdida: 0
         };
 
         rozamientoZona = { inicio: 400, fin: 600 };
     }
 
     rozamientoZona = { inicio: 350, fin: 450 };
+
+    // reset visual transfer flags
+    mostrarTransferencia = false;
+    framesTransferencia = 0;
+    energiaCineticaAntes = 0;
+    entroAlResorte = false;
+    velocidadEntradaResorte = 0;
+    saliendoDelResorte = false;
 
     offset = 0;
     resultado.textContent = "Energía final:";
@@ -265,17 +321,17 @@ function dibujarEscena() {
 
     if (modeloActual === 1) {
         ctx.fillStyle = "rgb(151,225,248)";
-        ctx.fillRect(-offset, 210, bola.longitudTotal + offset + 100, 3);
+        ctx.fillRect(-offset, PISO_Y, bola.longitudTotal + offset + 100, 3);
     }
 
     else if (modeloActual === 2) {
         ctx.fillStyle = "rgb(200,180,150)";
-        ctx.fillRect(-offset, 210, bola.longitudTotal + offset + 100, 3);
+        ctx.fillRect(-offset, PISO_Y, bola.longitudTotal + offset + 100, 3);
 
         ctx.fillStyle = "red";
         for (let x = rozamientoZona.inicio; x < rozamientoZona.fin; x += 12) {
             ctx.beginPath();
-            ctx.arc(x - offset, 212, 2, 0, Math.PI * 2);
+            ctx.arc(x - offset, PISO_Y + 2, 2, 0, Math.PI * 2);
             ctx.fill();
         }
     }
@@ -319,17 +375,17 @@ function dibujarEscena() {
 
     else if (modeloActual === 5) {
         ctx.fillStyle = "rgb(200,180,150)";
-        ctx.fillRect(-offset, 210, bola.longitudTotal + offset + 100, 3);
+        ctx.fillRect(-offset, PISO_Y, bola.longitudTotal + offset + 100, 3);
 
         ctx.fillStyle = "red";
         for (let x = rozamientoZona.inicio; x < rozamientoZona.fin; x += 12) {
             ctx.beginPath();
-            ctx.arc(x - offset, 212, 2, 0, Math.PI * 2);
+            ctx.arc(x - offset, PISO_Y + 2, 2, 0, Math.PI * 2);
             ctx.fill();
         }
 
         let xFinal = bola.longitudTotal - 80 - offset;
-        let yFinal = 200 - 15;
+        let yFinal = PISO_Y - 15;
         const largoResorte = 80;
         const zigZags = 10;
         const amplitud = 10;
@@ -371,40 +427,101 @@ function moverBola() {
 
     // -------- MODELO 5 --------
     if (modeloActual === 5) {
-        const dt = 0.1;
-        const rozamiento = 0.1;
-
-        const enZonaRoz = bola.x > rozamientoZona.inicio && bola.x < rozamientoZona.fin;
-        const f = rozamiento * 9;
-
-        if (enZonaRoz){
-            if (bola.velocidad > 0) bola.velocidad -= rozamiento;
-            else if (bola.velocidad < 0) bola.velocidad += rozamiento;
-        }
-
-        bola.x += bola.velocidad * dt * 10;
+        // mantener la bola pegada al piso visual
+        if (bola) bola.y = PISO_Y - bola.radio;
 
         const inicioResorte = bola.longitudTotal - 80;
-        const k = 150;
+        const kResorte = 150;
+        const maxCompresionPx = 40;
 
-        if (bola.x + bola.radio >= inicioResorte) {
+        // --- ROZAMIENTO ---
+        const enZonaRoz = bola.x > rozamientoZona.inicio && bola.x < rozamientoZona.fin;
+        if (enZonaRoz) {
+            // guardamos velocidad antes para calcular pérdida de energía
+            const vAntes = bola.velocidad;
+
+            if (bola.velocidad > 0) bola.velocidad = Math.max(0, bola.velocidad - rozamiento);
+            else if (bola.velocidad < 0) bola.velocidad = Math.min(0, bola.velocidad + rozamiento);
+
+            const vDespues = bola.velocidad;
+            const dE = 0.5 * bola.masa * (vAntes * vAntes - vDespues * vDespues);
+            if (dE > 0) {
+                bola.energiaPerdida = (bola.energiaPerdida || 0) + dE;
+            }
+
+            // Si el rozamiento consumió toda la velocidad -> mostrar energía final 0 y parar
+            if (Math.abs(bola.velocidad) < EPS) {
+                bola.velocidad = 0;
+                // energía final = 0 (rozamiento consumió todo)
+                // mostramos además la pérdida acumulada en la UI (elost se actualiza en actualizarEnergia)
+                actualizarEnergia();
+                resultado.textContent = `Energía final: 0.00 J`;
+                cancelAnimationFrame(animacionActiva);
+                animacionActiva = null;
+                return;
+            }
+        }
+
+        // --- DETECTAR CONTACTO ---
+        const contacto = (bola.x + bola.radio) >= inicioResorte;
+
+        if (contacto) {
+
+            // 1) ENTRADA AL RESORTE → activamos la visual "transferencia" para 1 FRAME (visible)
+            if (!entroAlResorte) {
+                entroAlResorte = true;
+
+                velocidadEntradaResorte = bola.velocidad;     // guardamos cinética real
+                energiaCineticaAntes = 0.5 * bola.masa * velocidadEntradaResorte * velocidadEntradaResorte;
+
+                // activamos la visual de transferencia; se consumirá AFTER actualizarEnergia()
+                mostrarTransferencia = true;
+                framesTransferencia = 1;
+            }
+
+            // calculamos compresión y fuerza normalmente (la física NO se pausa)
             let compresionPx = (bola.x + bola.radio) - inicioResorte;
-            let compresion = compresionPx / 100;
+            compresionPx = Math.min(Math.max(0, compresionPx), maxCompresionPx);
+            const compresionM = pixelsAMetros(compresionPx);
 
-            bola.energiaInicial = bola.energiaElastica;
-
-            const F_resorte = -k * compresion;
+            const F_resorte = -kResorte * compresionM;
             const a_resorte = F_resorte / bola.masa;
 
             bola.velocidad += a_resorte * dt * 10;
+            bola.x += bola.velocidad * dt * 10;
 
-            const maxCompresionPx = 40;
-            if (compresionPx > maxCompresionPx) {
-                compresionPx = maxCompresionPx;
-                bola.x = inicioResorte - bola.radio + maxCompresionPx;
+            bola.energiaElastica = 0.5 * kResorte * compresionM * compresionM;
+            bola.y = PISO_Y - bola.radio;
+            bola.inResorte = true;
+
+            // si la velocidad se vuelve negativa -> está saliendo
+            saliendoDelResorte = (bola.velocidad < 0);
+        }
+
+        // --- SALIENDO DEL RESORTE ---
+        else {
+            // Si estaba en el resorte y ahora está saliendo -> devolver velocidad exacta invertida
+            if (entroAlResorte && saliendoDelResorte) {
+                bola.velocidad = -velocidadEntradaResorte;
+                entroAlResorte = false;
+                saliendoDelResorte = false;
+                bola.energiaElastica = 0;
+            }
+
+            bola.inResorte = false;
+
+            // Movimiento normal por inercia
+            bola.x += bola.velocidad * dt * 10;
+            bola.y = PISO_Y - bola.radio;
+
+            // reset de flags cuando realmente está lejos (por seguridad)
+            if (entroAlResorte && bola.x < inicioResorte - 30) {
+                entroAlResorte = false;
+                saliendoDelResorte = false;
             }
         }
     }
+
 
     // -------- MODELO 4 --------
     if (modeloActual === 4) {
@@ -429,8 +546,15 @@ function moverBola() {
         }
 
         if (bola.x > rozamientoZona.inicio && bola.x < rozamientoZona.fin) {
+            // acumulamos pérdida causada por esta reducción (similar a model 2/5)
+            const vAntes = bola.velocidad;
             if (bola.velocidad > 0) bola.velocidad -= 0.1;
             else bola.velocidad += 0.1;
+            const vDespues = bola.velocidad;
+            const dE = 0.5 * bola.masa * (vAntes * vAntes - vDespues * vDespues);
+            if (dE > 0) {
+                bola.energiaPerdida = (bola.energiaPerdida || 0) + dE;
+            }
 
             if (Math.abs(bola.velocidad) < 0.002) bola.velocidad = 0;
         }
@@ -474,8 +598,14 @@ function moverBola() {
         const enZona = bola.x > rozamientoZona.inicio && bola.x < rozamientoZona.fin;
 
         if (enZona) {
+            const vAntes = bola.velocidad;
             bola.velocidad -= rozamiento;
             if (bola.velocidad < 0) bola.velocidad = 0;
+            const vDespues = bola.velocidad;
+            const dE = 0.5 * bola.masa * (vAntes * vAntes - vDespues * vDespues);
+            if (dE > 0) {
+                bola.energiaPerdida = (bola.energiaPerdida || 0) + dE;
+            }
         }
 
         bola.x += bola.velocidad * dt * 10;
@@ -491,11 +621,20 @@ function moverBola() {
     dibujarEscena();
     actualizarEnergia();
 
+    // --- después de mostrar la energía en la UI, consumimos 1 frame de la transferencia ---
+    if (mostrarTransferencia && framesTransferencia > 0) {
+        framesTransferencia--;
+        if (framesTransferencia <= 0) {
+            mostrarTransferencia = false;
+        }
+    }
+
     bola.trail.push({ x: bola.x, y: bola.y });
     if (bola.trail.length > 15) bola.trail.shift();
 
     tiempo += 0.15;
 
+    // si llega al final derecho normal
     if (bola.x >= bola.longitudTotal) {
         if (modeloActual === 3) {
             const vFinal = Math.sqrt((2 * bola.energiaInicial) / bola.masa);
@@ -516,25 +655,34 @@ function moverBola() {
         return;
     }
 
-      // ---- NUEVO: detectar cuando vuelve hacia la izquierda y queda frenada ----
-      if (modeloActual === 5) {
+    // ---- NUEVO: detectar cuando vuelve hacia la izquierda y termina el recorrido ----
+    if (modeloActual === 5) {
+        // calculamos energía total actual (EP=0 en este modelo de piso plano)
+        const ep = 0;
+        const ek = 0.5 * bola.masa * bola.velocidad * bola.velocidad;
+        const ee = bola.energiaElastica || 0;
+        const energiaTotalActual = ep + ek + ee;
 
-      // si la velocidad se hace muy chica, la damos como detenida
-      if (Math.abs(bola.velocidad) < 0.02 && bola.x < rozamientoZona.fin) {
-  
-      bola.velocidad = 0;
+        // almacenamos para debug / referencia
+        bola.ultimaEnergiaTotal = energiaTotalActual;
 
-      // energía final toda cinética (pero como está quieta, es 0)
-      bola.energiaFinal = 0.5 * bola.masa * bola.velocidad * bola.velocidad;
+        // si vuelve hacia la izquierda y llegó al inicio (x pequeño), mostramos energía final
+        if (bola.velocidad < 0 && bola.x <= 15) {
+            // si la energía es prácticamente 0 -> mostrar 0
+            if (energiaTotalActual < EPS) {
+                resultado.textContent = `Energía final: 0.00 J`;
+            } else {
+                resultado.textContent = `Energía final: ${energiaTotalActual.toFixed(2)} J`;
+            }
 
-      resultado.textContent =
-     `Energía final: ${bola.energiaFinal.toFixed(2)} J`;
+            // actualizamos la UI final con pérdidas incluidas
+            actualizarEnergia();
 
-      cancelAnimationFrame(animacionActiva);
-      animacionActiva = null;
-      return;
+            cancelAnimationFrame(animacionActiva);
+            animacionActiva = null;
+            return;
+        }
     }
-  }
 
     animacionActiva = requestAnimationFrame(moverBola);
 }
