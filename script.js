@@ -728,7 +728,7 @@ btnModelo1.addEventListener("click", () => {
     btnModelo5.style.backgroundColor = "";
 
     inicializar();   // coloca bola y valores iniciales
-    dibujarMapa(); 
+    dibujarEscena(); 
 });
 
 btnModelo2.addEventListener("click", () => {
@@ -745,7 +745,7 @@ btnModelo2.addEventListener("click", () => {
     btnModelo5.style.backgroundColor = "";
 
     inicializar();   // coloca bola y valores iniciales
-    dibujarMapa(); 
+    dibujarEscena(); 
 });
 
 btnModelo3.addEventListener("click", () => {
@@ -763,7 +763,7 @@ btnModelo3.addEventListener("click", () => {
     btnModelo5.style.backgroundColor = "";
 
     inicializar();   // coloca bola y valores iniciales
-    dibujarMapa(); 
+    dibujarEscena(); 
 });
 
 btnModelo4.addEventListener("click", () => {
@@ -781,7 +781,7 @@ btnModelo4.addEventListener("click", () => {
     btnModelo5.style.backgroundColor = "";
 
     inicializar();   // coloca bola y valores iniciales
-    dibujarMapa(); 
+    dibujarEscena(); 
 });
 
 btnModelo5.addEventListener("click", () => {
@@ -799,7 +799,7 @@ btnModelo5.addEventListener("click", () => {
     btnModelo4.style.backgroundColor = "";
 
     inicializar();   // coloca bola y valores iniciales
-    dibujarMapa(); 
+    dibujarEscena(); 
 });
 
 btnModelo1.classList.add("activo");
