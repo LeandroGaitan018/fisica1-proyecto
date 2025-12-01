@@ -12,6 +12,7 @@ const btnModelo5 = document.getElementById("modelo5");
 const labelAltura = document.getElementById("label-altura");
 const labelDistancia = document.getElementById("label-distancia");
 const labelVelocidad = document.getElementById("label-velocidad");
+const labelMu = document.getElementById("label-mu")
 
 
 let tiempo = 0;
@@ -438,13 +439,36 @@ function dibujarEscena() {
     ctx.fill();
 }
 
+function mostrarErrorUI(mensaje) {
+    const resultadoP = document.getElementById("resultado");
+    resultadoP.textContent = "⚠️ " + mensaje;
+    resultadoP.style.color = "yellow"; // O el color de error que prefieras
+}
+
+function limpiarErrorUI() {
+    const resultadoP = document.getElementById("resultado");
+    resultadoP.textContent = "Energía final:";
+    resultadoP.style.color = "rgb(248, 108, 61)"; // Vuelve al color original (según tu styles.css)
+}
+
+
 // ----------------- Movimiento -----------------
 function moverBola() {
     const dt = 0.1;
-    const rozamiento = 0.1;
+    const muK = parseFloat(document.getElementById("mu").value) || 0.1;
+    const g = 9.81;
+    const aceleracionRozamiento = muK * g;
+    const rozamiento = (aceleracionRozamiento * dt) / 10;
 
     // -------- MODELO 5 --------
     if (modeloActual === 5) {
+        if (muK > 0 && muK < 1) {
+          muKvalue = muK;
+          limpiarErrorUI();
+        } else {
+          mostrarErrorUI("El coeficiente de Rozamiento (μk) debe estar entre 0 y 1.");
+          return
+        }
         // mantener la bola pegada al piso visual
         if (bola) bola.y = PISO_Y - bola.radio;
 
@@ -657,6 +681,13 @@ function moverBola() {
     // -------- MODELO 2 --------
     if (modeloActual === 2) {
         const enZona = bola.x > rozamientoZona.inicio && bola.x < rozamientoZona.fin;
+        if (muK > 0 && muK < 1) {
+          muKvalue = muK;
+          limpiarErrorUI();
+        } else {
+          mostrarErrorUI("El coeficiente de Rozamiento (μk) debe estar entre 0 y 1.");
+          return
+        }
 
         if (enZona) {
             const vAntes = bola.velocidad;
@@ -753,6 +784,7 @@ function resetParametrosUI() {
     labelAltura.style.display = "block";
     labelVelocidad.style.display = "block";
     labelDistancia.style.display = "block";
+    labelMu.style.display = "block";
 }
 
 
@@ -769,6 +801,7 @@ btnModelo1.addEventListener("click", () => {
     modeloActual = 1;
     btnModelo1.style.backgroundColor = "rgb(100,180,255)";
     labelAltura.style.display = "none";
+    labelMu.style.display = "none";
     labelDistancia.style.display = "block";
 
     btnModelo2.style.backgroundColor = "";
@@ -805,6 +838,7 @@ btnModelo3.addEventListener("click", () => {
     labelAltura.style.display = "block";
     labelVelocidad.style.display = "none";
     labelDistancia.style.display = "none";
+    labelMu.style.display = "none";
 
     btnModelo1.style.backgroundColor = "";
     btnModelo2.style.backgroundColor = "";
@@ -823,6 +857,7 @@ btnModelo4.addEventListener("click", () => {
     labelAltura.style.display = "block";
     labelVelocidad.style.display = "none";
     labelDistancia.style.display = "none";
+    labelMu.style.display = "block";
 
     btnModelo1.style.backgroundColor = "";
     btnModelo2.style.backgroundColor = "";
@@ -841,6 +876,7 @@ btnModelo5.addEventListener("click", () => {
     labelAltura.style.display = "none";
     labelVelocidad.style.display = "block";
     labelDistancia.style.display = "block";
+    labelMu.style.display = "block";
 
     btnModelo1.style.backgroundColor = "";
     btnModelo2.style.backgroundColor = "";
