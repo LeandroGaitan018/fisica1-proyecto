@@ -74,10 +74,23 @@ function calcularEnergiaK(velocidad) {
 function actualizarEnergia() {
     let ep = 0, ek = 0, ee = 0;
 
-    if (bola.velocidad === 0) {
-      ekDisplay.textContent = "0.00 J";
-      return;
+    // Si la velocidad es prácticamente cero, forzar todo a cero
+  if (Math.abs(bola.velocidad) < EPS) {
+    bola.velocidad = 0;
+    ekDisplay.textContent = "0.00 J";
+    epDisplay.textContent = "0.00 J";
+    eeDisplay.textContent = "0.00 J";
+    etDisplay.textContent = "0.00 J";
+    
+    // Para modelo 5, asegurar que energía perdida = energía inicial
+    if (modeloActual === 5) {
+      bola.energiaPerdida = bola.energiaInicial;
     }
+    
+    const elost = bola.energiaPerdida || 0;
+    elostDisplay.textContent = elost.toFixed(2) + " J";
+    return;
+  }
 
     // Si estamos mostrando la transferencia visual en modelo 5 -> forzamos la UI
     if (modeloActual === 5 && mostrarTransferencia) {
@@ -436,95 +449,131 @@ function moverBola() {
         if (bola) bola.y = PISO_Y - bola.radio;
 
         const inicioResorte = bola.longitudTotal - 80;
-        const kResorte = 150;
-        const maxCompresionPx = 40;
+        const maxCompresionPx = 60;
+        
+        // Constante k mucho más alta para soportar altas velocidades
+        const kResorte = 500 + (bola.masa * 20);
 
-        // --- ROZAMIENTO ---
+        // --- ROZAMIENTO (solo si NO está en contacto con el resorte) ---
         const enZonaRoz = bola.x > rozamientoZona.inicio && bola.x < rozamientoZona.fin;
-        if (enZonaRoz) {
-            // guardamos velocidad antes para calcular pérdida de energía
-            const vAntes = bola.velocidad;
+        
+        // Primero manejar el movimiento y luego verificar contacto con resorte
+        let nuevaX = bola.x;
+        let nuevaVel = bola.velocidad;
+        
+        // Aplicar rozamiento si está en la zona y no en el resorte
+        if (enZonaRoz && bola.x < inicioResorte - 20) {
+            const vAntes = nuevaVel;
 
-            if (bola.velocidad > 0) bola.velocidad = Math.max(0, bola.velocidad - rozamiento);
-            else if (bola.velocidad < 0) bola.velocidad = Math.min(0, bola.velocidad + rozamiento);
+            // Aplicar rozamiento
+            if (nuevaVel > 0) {
+                nuevaVel = nuevaVel - rozamiento;
+                // Si el rozamiento haría que cambie de dirección, detener completamente
+                if (nuevaVel <= 0) {
+                    // Calcular la energía que tenía justo antes de detenerse
+                    const energiaRestante = 0.5 * bola.masa * vAntes * vAntes;
+                    bola.energiaPerdida = (bola.energiaPerdida || 0) + energiaRestante;
+                    
+                    nuevaVel = 0;
+                    bola.velocidad = 0;
+                    bola.x = nuevaX;
+                    actualizarEnergia();
+                    resultado.textContent = `Energía final: 0.00 J`;
+                    cancelAnimationFrame(animacionActiva);
+                    animacionActiva = null;
+                    return;
+                }
+            } else if (nuevaVel < 0) {
+                nuevaVel = nuevaVel + rozamiento;
+                // Si el rozamiento haría que cambie de dirección, detener completamente
+                if (nuevaVel >= 0) {
+                    // Calcular la energía que tenía justo antes de detenerse
+                    const energiaRestante = 0.5 * bola.masa * vAntes * vAntes;
+                    bola.energiaPerdida = (bola.energiaPerdida || 0) + energiaRestante;
+                    
+                    nuevaVel = 0;
+                    bola.velocidad = 0;
+                    bola.x = nuevaX;
+                    actualizarEnergia();
+                    resultado.textContent = `Energía final: 0.00 J`;
+                    cancelAnimationFrame(animacionActiva);
+                    animacionActiva = null;
+                    return;
+                }
+            }
 
-            const vDespues = bola.velocidad;
+            // Calcular pérdida de energía si sigue moviéndose
+            const vDespues = nuevaVel;
             const dE = 0.5 * bola.masa * (vAntes * vAntes - vDespues * vDespues);
             if (dE > 0) {
                 bola.energiaPerdida = (bola.energiaPerdida || 0) + dE;
             }
-
-            // Si el rozamiento consumió toda la velocidad -> mostrar energía final 0 y parar
-            if (Math.abs(bola.velocidad) < EPS) {
-                bola.velocidad = 0;
-                // energía final = 0 (rozamiento consumió todo)
-                // mostramos además la pérdida acumulada en la UI (elost se actualiza en actualizarEnergia)
-                actualizarEnergia();
-                resultado.textContent = `Energía final: 0.00 J`;
-                cancelAnimationFrame(animacionActiva);
-                animacionActiva = null;
-                return;
-            }
         }
 
-        // --- DETECTAR CONTACTO ---
-        const contacto = (bola.x + bola.radio) >= inicioResorte;
+        // Calcular próxima posición
+        nuevaX += nuevaVel * dt * 10;
 
-        if (contacto) {
+        // Verificar si va a contactar o está en contacto con el resorte
+        const contactoResorte = (nuevaX + bola.radio) >= inicioResorte;
 
-            // 1) ENTRADA AL RESORTE → activamos la visual "transferencia" para 1 FRAME (visible)
-            if (!entroAlResorte) {
+        if (contactoResorte) {
+            // 1) ENTRADA AL RESORTE
+            if (!entroAlResorte && nuevaVel > 0.1) {
                 entroAlResorte = true;
+                saliendoDelResorte = false;
 
-                velocidadEntradaResorte = bola.velocidad;     // guardamos cinética real
+                velocidadEntradaResorte = nuevaVel;
                 energiaCineticaAntes = 0.5 * bola.masa * velocidadEntradaResorte * velocidadEntradaResorte;
 
-                // activamos la visual de transferencia; se consumirá AFTER actualizarEnergia()
                 mostrarTransferencia = true;
                 framesTransferencia = 1;
             }
 
-            // calculamos compresión y fuerza normalmente (la física NO se pausa)
-            let compresionPx = (bola.x + bola.radio) - inicioResorte;
-            compresionPx = Math.min(Math.max(0, compresionPx), maxCompresionPx);
-            const compresionM = pixelsAMetros(compresionPx);
+            // Calcular compresión
+            let compresionPx = (nuevaX + bola.radio) - inicioResorte;
+            
+            // Limitar compresión al máximo permitido (pared dura)
+            if (compresionPx > maxCompresionPx) {
+                compresionPx = maxCompresionPx;
+                nuevaX = inicioResorte + maxCompresionPx - bola.radio;
+                // Rebotar conservando EXACTAMENTE la magnitud de velocidad de entrada
+                nuevaVel = -velocidadEntradaResorte;
+                saliendoDelResorte = true;
+            } else {
+                // Física normal del resorte
+                const compresionM = pixelsAMetros(compresionPx);
+                const F_resorte = -kResorte * compresionM;
+                const a_resorte = F_resorte / bola.masa;
 
-            const F_resorte = -kResorte * compresionM;
-            const a_resorte = F_resorte / bola.masa;
+                nuevaVel += a_resorte * dt * 10;
+                
+                // Detectar punto de máxima compresión e inversión
+                if (nuevaVel < -0.1 && !saliendoDelResorte) {
+                    saliendoDelResorte = true;
+                    // Al salir, asegurar conservación de energía
+                    // La velocidad de salida debe tener la misma magnitud que la de entrada
+                    nuevaVel = -velocidadEntradaResorte;
+                }
+            }
 
-            bola.velocidad += a_resorte * dt * 10;
-            bola.x += bola.velocidad * dt * 10;
-
-            bola.energiaElastica = 0.5 * kResorte * compresionM * compresionM;
-            bola.y = PISO_Y - bola.radio;
+            bola.energiaElastica = 0.5 * kResorte * pixelsAMetros(compresionPx) * pixelsAMetros(compresionPx);
             bola.inResorte = true;
-
-            // si la velocidad se vuelve negativa -> está saliendo
-            saliendoDelResorte = (bola.velocidad < 0);
-        }
-
-        // --- SALIENDO DEL RESORTE ---
-        else {
-            // Si estaba en el resorte y ahora está saliendo -> devolver velocidad exacta invertida
+        } else {
+            // FUERA DEL RESORTE
             if (entroAlResorte && saliendoDelResorte) {
-                bola.velocidad = -velocidadEntradaResorte;
+                // Al salir completamente, asegurar que la velocidad sea exactamente la inversa
+                nuevaVel = -velocidadEntradaResorte;
                 entroAlResorte = false;
                 saliendoDelResorte = false;
                 bola.energiaElastica = 0;
             }
-
             bola.inResorte = false;
-
-            // Movimiento normal por inercia
-            bola.x += bola.velocidad * dt * 10;
-            bola.y = PISO_Y - bola.radio;
-
-            // reset de flags cuando realmente está lejos (por seguridad)
-            if (entroAlResorte && bola.x < inicioResorte - 30) {
-                entroAlResorte = false;
-                saliendoDelResorte = false;
-            }
         }
+
+        // Actualizar posición y velocidad
+        bola.x = nuevaX;
+        bola.velocidad = nuevaVel;
+        bola.y = PISO_Y - bola.radio;
     }
 
 
