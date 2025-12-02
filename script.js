@@ -455,14 +455,14 @@ function limpiarErrorUI() {
 // ----------------- Movimiento -----------------
 function moverBola() {
     const dt = 0.1;
-    const muK = parseFloat(document.getElementById("mu").value) || 0.1;
+    const muK = parseFloat(document.getElementById("mu").value);
     const g = 9.81;
     const aceleracionRozamiento = muK * g;
     const rozamiento = (aceleracionRozamiento * dt) / 10;
 
     // -------- MODELO 5 --------
     if (modeloActual === 5) {
-        if (muK > 0 && muK < 1) {
+        if (muK >= 0 && muK <= 1) {
           muKvalue = muK;
           limpiarErrorUI();
         } else {
@@ -681,7 +681,7 @@ function moverBola() {
     // -------- MODELO 2 --------
     if (modeloActual === 2) {
         const enZona = bola.x > rozamientoZona.inicio && bola.x < rozamientoZona.fin;
-        if (muK > 0 && muK < 1) {
+        if (muK >= 0 && muK <= 1) {
           muKvalue = muK;
           limpiarErrorUI();
         } else {
