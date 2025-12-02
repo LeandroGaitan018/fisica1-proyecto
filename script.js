@@ -144,9 +144,12 @@ function actualizarEnergia() {
 
     if (modeloActual === 1 || modeloActual === 2 || modeloActual === 5) {
         ek = calcularEnergiaK(bola.velocidad);
+        if (modeloActual === 5) {
+          ee = bola.energiaElastica || 0
+        }
     }
 
-    const et = ep + ek + ee;
+    const et = ep + ek;
     let elost = 0;
 
     // base: pérdidas acumuladas por rozamiento (si están presentes)
@@ -755,7 +758,7 @@ function moverBola() {
                 }
             }
 
-            bola.energiaElastica = 0.5 * kResorte * pixelsAMetros(compresionPx) * pixelsAMetros(compresionPx);
+            bola.energiaElastica = 0.5 * kResorte * (compresionPx / 10) * (compresionPx / 10);;
             bola.inResorte = true;
         } else {
             // FUERA DEL RESORTE
