@@ -47,6 +47,18 @@ let energiaCineticaAntes = 0;
 // tolerancia para considerar "cero" energía/velocidad
 const EPS = 1e-3;
 
+let datosGrafico = {
+    posiciones: [],
+    ep: [],
+    ek: [],
+    ee: [],
+    elost: [],
+    et: []
+};
+let chartInstance = null;
+let contadorFrames = 0;
+
+
 function pixelsAMetros(px) {
     return px / 100
 }
@@ -155,6 +167,17 @@ function actualizarEnergia() {
     etDisplay.textContent = et.toFixed(2) + " J";
     eeDisplay.textContent = ee.toFixed(2) + " J";
     elostDisplay.textContent = elost.toFixed(2) + " J";
+
+    contadorFrames++;
+    if (contadorFrames % 3 === 0) {
+        const posicionMetros = pixelsAMetros(bola.x);
+        datosGrafico.posiciones.push(posicionMetros);
+        datosGrafico.ep.push(ep);
+        datosGrafico.ek.push(ek);
+        datosGrafico.ee.push(ee);
+        datosGrafico.elost.push(elost);
+        datosGrafico.et.push(et);
+    }
 }
 
 // ENERGIA RESORTE
@@ -242,6 +265,17 @@ function inicializar() {
     const velocidadIn = parseFloat(document.getElementById("velocidad").value) || 0;
     const distancia = parseFloat(document.getElementById("distancia").value) || 200;
     const radio = 10;
+
+    datosGrafico = {
+        posiciones: [],
+        ep: [],
+        ek: [],
+        ee: [],
+        elost: [],
+        et: []
+    };
+    contadorFrames = 0;
+    document.getElementById('grafico-container').style.display = 'none';
 
     if (modeloActual === 1 || modeloActual === 2) {
         bola = {
@@ -451,6 +485,144 @@ function limpiarErrorUI() {
     resultadoP.style.color = "rgb(248, 108, 61)"; // Vuelve al color original (según tu styles.css)
 }
 
+function generarGrafico() {
+    // Mostrar el contenedor del gráfico
+    document.getElementById('grafico-container').style.display = 'block';
+    
+    // Destruir gráfico anterior si existe
+    if (chartInstance) {
+        chartInstance.destroy();
+    }
+
+    const ctx = document.getElementById('energyChart').getContext('2d');
+    
+    // Configurar datasets según el modelo
+    const datasets = [];
+    
+    // Energía Potencial (solo para modelo 3)
+    if (modeloActual === 3) {
+        datasets.push({
+            label: 'Energía Potencial',
+            data: datosGrafico.ep,
+            borderColor: '#e20a0a',
+            backgroundColor: 'rgba(226, 10, 10, 0.1)',
+            borderWidth: 2,
+            tension: 0.4
+        });
+    }
+    
+    // Energía Cinética (todos los modelos)
+    datasets.push({
+        label: 'Energía Cinética',
+        data: datosGrafico.ek,
+        borderColor: '#1ce6d8',
+        backgroundColor: 'rgba(28, 230, 216, 0.1)',
+        borderWidth: 2,
+        tension: 0.4
+    });
+    
+    // Energía Elástica (solo modelo 5)
+    if (modeloActual === 5) {
+        datasets.push({
+            label: 'Energía Elástica',
+            data: datosGrafico.ee,
+            borderColor: '#d642d6',
+            backgroundColor: 'rgba(214, 66, 214, 0.1)',
+            borderWidth: 2,
+            tension: 0.4
+        });
+    }
+    
+    // Energía Perdida (modelos 2 y 5)
+    if (modeloActual === 2 || modeloActual === 5) {
+        datasets.push({
+            label: 'Energía Perdida',
+            data: datosGrafico.elost,
+            borderColor: '#1db457',
+            backgroundColor: 'rgba(29, 180, 87, 0.1)',
+            borderWidth: 2,
+            tension: 0.4
+        });
+    }
+    
+    // Energía Total
+    datasets.push({
+        label: 'Energía Total',
+        data: datosGrafico.et,
+        borderColor: '#fdcd30',
+        backgroundColor: 'rgba(253, 205, 48, 0.1)',
+        borderWidth: 3,
+        tension: 0.4
+    });
+
+    chartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: datosGrafico.posiciones.map(p => p.toFixed(2)),
+            datasets: datasets
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top',
+                    labels: {
+                        color: '#f1f1f1',
+                        font: {
+                            size: 12
+                        }
+                    }
+                },
+                title: {
+                    display: false
+                }
+            },
+            scales: {
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Posición (m)',
+                        color: '#76f7bb',
+                        font: {
+                            size: 14,
+                            weight: 'bold'
+                        }
+                    },
+                    ticks: {
+                        color: '#f1f1f1',
+                        maxTicksLimit: 15
+                    },
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
+                    }
+                },
+                y: {
+                    title: {
+                        display: true,
+                        text: 'Energía (J)',
+                        color: '#76f7bb',
+                        font: {
+                            size: 14,
+                            weight: 'bold'
+                        }
+                    },
+                    ticks: {
+                        color: '#f1f1f1'
+                    },
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
+                    },
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+    
+    // Scroll suave hacia el gráfico
+    document.getElementById('grafico-container').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
 
 // ----------------- Movimiento -----------------
 function moverBola() {
@@ -505,6 +677,7 @@ function moverBola() {
                     resultado.textContent = `Energía final: 0.00 J`;
                     cancelAnimationFrame(animacionActiva);
                     animacionActiva = null;
+                    generarGrafico();
                     return;
                 }
             } else if (nuevaVel < 0) {
@@ -522,6 +695,7 @@ function moverBola() {
                     resultado.textContent = `Energía final: 0.00 J`;
                     cancelAnimationFrame(animacionActiva);
                     animacionActiva = null;
+                    generarGrafico();
                     return;
                 }
             }
@@ -744,6 +918,7 @@ function moverBola() {
 
         cancelAnimationFrame(animacionActiva);
         animacionActiva = null;
+        generarGrafico();
         return;
     }
 
@@ -772,6 +947,7 @@ function moverBola() {
 
             cancelAnimationFrame(animacionActiva);
             animacionActiva = null;
+            generarGrafico();
             return;
         }
     }

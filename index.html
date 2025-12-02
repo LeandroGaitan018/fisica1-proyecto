@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Simulación de bola con rozamiento</title>
   <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 </head>
 <body>
   <header class="titulo">
@@ -28,17 +29,17 @@
 
         <label id="label-altura" style="display:none;">
           Altura inicial (m):
-          <input type="number" id="altura"">
+          <input type="number" id="altura">
         </label>
 
         <label id="label-distancia">
           Distancia (m): 
-          <input type="number" id="distancia"">
+          <input type="number" id="distancia">
         </label>
 
         <label id="label-mu">
           Mu: 
-          <input type="number" id="mu"">
+          <input type="number" id="mu">
         </label>
 
         <button id="iniciar">Iniciar</button>
@@ -79,6 +80,12 @@
           <button id="modelo5">Modelo 5: Rozamiento y resorte</button>
         </div>
     </div>
+  </div>
+
+  <!-- Sección del gráfico -->
+  <div id="grafico-container" style="display: none; margin: 20px; padding: 20px; background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%); border-radius: 12px; box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);">
+    <h2 style="color: #76f7bb; text-align: center; margin-bottom: 20px;">Gráfico de Energías vs Posición</h2>
+    <canvas id="energyChart" style="max-height: 400px;"></canvas>
   </div>
 
 <script src="script.js"></script>
