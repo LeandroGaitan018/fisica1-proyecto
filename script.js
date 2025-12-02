@@ -849,24 +849,24 @@ btnModelo3.addEventListener("click", () => {
     dibujarEscena(); 
 });
 
-btnModelo4.addEventListener("click", () => {
-    resetParametrosUI()
-
-    modeloActual = 4;
-    btnModelo4.style.backgroundColor = "rgb(100,180,255)";
-    labelAltura.style.display = "block";
-    labelVelocidad.style.display = "none";
-    labelDistancia.style.display = "none";
-    labelMu.style.display = "block";
-
-    btnModelo1.style.backgroundColor = "";
-    btnModelo2.style.backgroundColor = "";
-    btnModelo3.style.backgroundColor = "";
-    btnModelo5.style.backgroundColor = "";
-
-    inicializar();   // coloca bola y valores iniciales
-    dibujarEscena(); 
-});
+//btnModelo4.addEventListener("click", () => {
+//   resetParametrosUI()
+//
+//    modeloActual = 4;
+//    btnModelo4.style.backgroundColor = "rgb(100,180,255)";
+//    labelAltura.style.display = "block";
+//    labelVelocidad.style.display = "none";
+//    labelDistancia.style.display = "none";
+//    labelMu.style.display = "block";
+//
+//    btnModelo1.style.backgroundColor = "";
+//   btnModelo2.style.backgroundColor = "";
+//    btnModelo3.style.backgroundColor = "";
+//    btnModelo5.style.backgroundColor = "";
+//
+//    inicializar();   // coloca bola y valores iniciales
+//    dibujarEscena(); 
+//});
 
 btnModelo5.addEventListener("click", () => {
     resetParametrosUI()
