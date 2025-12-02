@@ -24,6 +24,8 @@ canvas.height = Math.max(canvas.height, 300);
 // constante del piso visual (coincide con el fillRect que dibuja la "línea")
 const PISO_Y = 210;
 
+let alturaRampaMetros = 1.4;
+
 // Elementos de energía
 const epDisplay = document.getElementById("ep")
 const ekDisplay = document.getElementById("ek")
@@ -67,14 +69,12 @@ function calcularEnergiaP(x, y) {
     if (modeloActual !== 3 && modeloActual !== 4) return 0;
 
     const rampaLargo = 300;
-    const pisoY = curvaRampaY(rampaLargo);
-
-    if (y + bola.radio >= pisoY - 1) {
-        return 0;
-    }
-
-    const alturaActual = pisoY - (y + bola.radio);
-    const h = pixelsAMetros(Math.max(0, alturaActual));
+    const pisoY = curvaRampaY(rampaLargo); // Punto final (altura = 0)
+    
+    // Calcular cuánto está elevado el centro de la bola respecto al piso final
+    const centroBola = y + bola.radio;
+    const alturaPixels = pisoY - centroBola; // Si está arriba, esto es positivo
+    const h = pixelsAMetros(Math.max(0, alturaPixels));
     const g = 9.81;
 
     return bola.masa * g * h;
@@ -196,14 +196,14 @@ function clamp(v, a, b) {
 function curvaRampaY(x) {
     const rampaLargo = 300;
     const yBase = 200;
-    const altura = 140;
+    const altura = alturaRampaMetros * 100; // Convertir metros a pixels
 
     if (x <= 0) return yBase - altura;
-    if (x >= rampaLargo) return yBase + 20;
+    if (x >= rampaLargo) return yBase; // ← Quitar el +20
 
     const t = x / rampaLargo;
 
-    return (yBase - altura) + (1 - (1 - t)*(1 - t)) * (altura + 20);
+    return (yBase - altura) + (1 - (1 - t)*(1 - t)) * altura; // ← Quitar el +20
 }
 
 function dibujarRampaCurva(offsetLocal = 0) {
@@ -292,14 +292,15 @@ function inicializar() {
 
     else if (modeloActual === 3) {
         const altura = parseFloat(document.getElementById("altura").value) || 1;
-
+        alturaRampaMetros = altura; // Actualizar la altura global para curvaRampaY
+    
         bola = {
             x: 0,
             y: curvaRampaY(0) - radio,
             radio, masa,
             velocidad: 0,
             distanciaRecorrida: 0,
-            energiaInicial: masa * 9.81 * altura,
+            energiaInicial: masa * 9.81 * altura, // Ahora usa directamente el input
             energiaFinal: 0,
             longitudTotal: 600,
             trail: [],
@@ -853,30 +854,46 @@ function moverBola() {
     }
 
     // -------- MODELO 2 --------
-    if (modeloActual === 2) {
-        const enZona = bola.x > rozamientoZona.inicio && bola.x < rozamientoZona.fin;
-        if (muK >= 0 && muK <= 1) {
-          muKvalue = muK;
-          limpiarErrorUI();
-        } else {
-          mostrarErrorUI("El coeficiente de Rozamiento (μk) debe estar entre 0 y 1.");
-          return
-        }
+    // -------- MODELO 2 --------
+if (modeloActual === 2) {
+    const enZona = bola.x > rozamientoZona.inicio && bola.x < rozamientoZona.fin;
+    if (muK >= 0 && muK <= 1) {
+      muKvalue = muK;
+      limpiarErrorUI();
+    } else {
+      mostrarErrorUI("El coeficiente de Rozamiento (μk) debe estar entre 0 y 1.");
+      return
+    }
 
-        if (enZona) {
-            const vAntes = bola.velocidad;
-            bola.velocidad -= rozamiento;
-            if (bola.velocidad < 0) bola.velocidad = 0;
+    if (enZona) {
+        const vAntes = bola.velocidad;
+        bola.velocidad -= rozamiento;
+        if (bola.velocidad <= 0) {  // ← Cambié de < a <=
+            bola.velocidad = 0;
             const vDespues = bola.velocidad;
             const dE = 0.5 * bola.masa * (vAntes * vAntes - vDespues * vDespues);
             if (dE > 0) {
                 bola.energiaPerdida = (bola.energiaPerdida || 0) + dE;
             }
+            
+            // ← AGREGUÉ ESTO: Detener animación y mostrar gráfico
+            actualizarEnergia();
+            resultado.textContent = `Energía final: 0.0 J`;
+            cancelAnimationFrame(animacionActiva);
+            animacionActiva = null;
+            generarGrafico();  // ← Esta es la línea clave
+            return;  // ← Salir de la función para detener la animación
         }
-
-        bola.x += bola.velocidad * dt * 10;
-        bola.distanciaRecorrida += bola.velocidad * dt;
+        const vDespues = bola.velocidad;
+        const dE = 0.5 * bola.masa * (vAntes * vAntes - vDespues * vDespues);
+        if (dE > 0) {
+            bola.energiaPerdida = (bola.energiaPerdida || 0) + dE;
+        }
     }
+
+    bola.x += bola.velocidad * dt * 10;
+    bola.distanciaRecorrida += bola.velocidad * dt;
+}
 
     // -------- MODELO 1 --------
     if (modeloActual === 1) {
