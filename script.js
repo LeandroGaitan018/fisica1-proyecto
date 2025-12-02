@@ -75,6 +75,8 @@ function calcularEnergiaP(x, y) {
     const centroBola = y + bola.radio;
     const alturaPixels = pisoY - centroBola; // Si está arriba, esto es positivo
     const h = pixelsAMetros(Math.max(0, alturaPixels));
+
+
     const g = 9.81;
 
     return bola.masa * g * h;
@@ -94,12 +96,12 @@ function actualizarEnergia() {
     epDisplay.textContent = "0.00 J";
     eeDisplay.textContent = "0.00 J";
     etDisplay.textContent = "0.00 J";
-    
+
     // Para modelo 5, asegurar que energía perdida = energía inicial
     if (modeloActual === 5) {
       bola.energiaPerdida = bola.energiaInicial;
     }
-    
+
     const elost = bola.energiaPerdida || 0;
     elostDisplay.textContent = elost.toFixed(2) + " J";
     return;
@@ -144,12 +146,9 @@ function actualizarEnergia() {
 
     if (modeloActual === 1 || modeloActual === 2 || modeloActual === 5) {
         ek = calcularEnergiaK(bola.velocidad);
-        if (modeloActual === 5) {
-          ee = bola.energiaElastica || 0
-        }
     }
 
-    const et = ep + ek;
+    const et = ep + ek + ee;
     let elost = 0;
 
     // base: pérdidas acumuladas por rozamiento (si están presentes)
@@ -492,17 +491,17 @@ function limpiarErrorUI() {
 function generarGrafico() {
     // Mostrar el contenedor del gráfico
     document.getElementById('grafico-container').style.display = 'block';
-    
+
     // Destruir gráfico anterior si existe
     if (chartInstance) {
         chartInstance.destroy();
     }
 
     const ctx = document.getElementById('energyChart').getContext('2d');
-    
+
     // Configurar datasets según el modelo
     const datasets = [];
-    
+
     // Energía Potencial (solo para modelo 3)
     if (modeloActual === 3) {
         datasets.push({
@@ -514,7 +513,7 @@ function generarGrafico() {
             tension: 0.4
         });
     }
-    
+
     // Energía Cinética (todos los modelos)
     datasets.push({
         label: 'Energía Cinética',
@@ -524,7 +523,7 @@ function generarGrafico() {
         borderWidth: 2,
         tension: 0.4
     });
-    
+
     // Energía Elástica (solo modelo 5)
     if (modeloActual === 5) {
         datasets.push({
@@ -536,7 +535,7 @@ function generarGrafico() {
             tension: 0.4
         });
     }
-    
+
     // Energía Perdida (modelos 2 y 5)
     if (modeloActual === 2 || modeloActual === 5) {
         datasets.push({
@@ -548,7 +547,7 @@ function generarGrafico() {
             tension: 0.4
         });
     }
-    
+
     // Energía Total
     datasets.push({
         label: 'Energía Total',
@@ -623,7 +622,7 @@ function generarGrafico() {
             }
         }
     });
-    
+
     // Scroll suave hacia el gráfico
     document.getElementById('grafico-container').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
@@ -650,17 +649,17 @@ function moverBola() {
 
         const inicioResorte = bola.longitudTotal - 80;
         const maxCompresionPx = 60;
-        
+
         // Constante k mucho más alta para soportar altas velocidades
         const kResorte = 500 + (bola.masa * 20);
 
         // --- ROZAMIENTO (solo si NO está en contacto con el resorte) ---
         const enZonaRoz = bola.x > rozamientoZona.inicio && bola.x < rozamientoZona.fin;
-        
+
         // Primero manejar el movimiento y luego verificar contacto con resorte
         let nuevaX = bola.x;
         let nuevaVel = bola.velocidad;
-        
+
         // Aplicar rozamiento si está en la zona y no en el resorte
         if (enZonaRoz && bola.x < inicioResorte - 20) {
             const vAntes = nuevaVel;
@@ -673,7 +672,7 @@ function moverBola() {
                     // Calcular la energía que tenía justo antes de detenerse
                     const energiaRestante = 0.5 * bola.masa * vAntes * vAntes;
                     bola.energiaPerdida = (bola.energiaPerdida || 0) + energiaRestante;
-                    
+
                     nuevaVel = 0;
                     bola.velocidad = 0;
                     bola.x = nuevaX;
@@ -691,7 +690,7 @@ function moverBola() {
                     // Calcular la energía que tenía justo antes de detenerse
                     const energiaRestante = 0.5 * bola.masa * vAntes * vAntes;
                     bola.energiaPerdida = (bola.energiaPerdida || 0) + energiaRestante;
-                    
+
                     nuevaVel = 0;
                     bola.velocidad = 0;
                     bola.x = nuevaX;
@@ -733,7 +732,7 @@ function moverBola() {
 
             // Calcular compresión
             let compresionPx = (nuevaX + bola.radio) - inicioResorte;
-            
+
             // Limitar compresión al máximo permitido (pared dura)
             if (compresionPx > maxCompresionPx) {
                 compresionPx = maxCompresionPx;
@@ -748,7 +747,7 @@ function moverBola() {
                 const a_resorte = F_resorte / bola.masa;
 
                 nuevaVel += a_resorte * dt * 10;
-                
+
                 // Detectar punto de máxima compresión e inversión
                 if (nuevaVel < -0.1 && !saliendoDelResorte) {
                     saliendoDelResorte = true;
@@ -758,7 +757,7 @@ function moverBola() {
                 }
             }
 
-            bola.energiaElastica = 0.5 * kResorte * (compresionPx / 10) * (compresionPx / 10);;
+            bola.energiaElastica = 0.5 * kResorte * pixelsAMetros(compresionPx) * pixelsAMetros(compresionPx);
             bola.inResorte = true;
         } else {
             // FUERA DEL RESORTE
@@ -892,6 +891,9 @@ if (modeloActual === 2) {
         if (dE > 0) {
             bola.energiaPerdida = (bola.energiaPerdida || 0) + dE;
         }
+
+
+
     }
 
     bola.x += bola.velocidad * dt * 10;
