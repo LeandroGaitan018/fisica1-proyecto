@@ -7,7 +7,6 @@ const btnModelo1 = document.getElementById("modelo1");
 const btnModelo2 = document.getElementById("modelo2");
 const btnModelo3 = document.getElementById("modelo3");
 const btnModelo4 = document.getElementById("modelo4");
-const btnModelo5 = document.getElementById("modelo5");
 
 const labelAltura = document.getElementById("label-altura");
 const labelDistancia = document.getElementById("label-distancia");
@@ -66,7 +65,7 @@ function pixelsAMetros(px) {
 }
 
 function calcularEnergiaP(x, y) {
-    if (modeloActual !== 3 && modeloActual !== 4) return 0;
+    if (modeloActual !== 3) return 0;
 
     const rampaLargo = 300;
     const pisoY = curvaRampaY(rampaLargo); // Punto final (altura = 0)
@@ -107,8 +106,8 @@ function actualizarEnergia() {
     return;
   }
 
-    // Si estamos mostrando la transferencia visual en modelo 5 -> forzamos la UI
-    if (modeloActual === 5 && mostrarTransferencia) {
+    // Si estamos mostrando la transferencia visual en modelo 4 -> forzamos la UI
+    if (modeloActual === 4 && mostrarTransferencia) {
         ep = 0;
         ek = 0; // mostrado como 0 por 1 frame
         ee = energiaCineticaAntes || 0;
@@ -144,7 +143,7 @@ function actualizarEnergia() {
         if (ek < 0) ek = 0;
     }
 
-    if (modeloActual === 1 || modeloActual === 2 || modeloActual === 5) {
+    if (modeloActual === 1 || modeloActual === 2 || modeloActual === 4) {
         ek = calcularEnergiaK(bola.velocidad);
     }
 
@@ -154,10 +153,10 @@ function actualizarEnergia() {
     // base: pérdidas acumuladas por rozamiento (si están presentes)
     elost += (bola.energiaPerdida || 0);
 
-    // además, si tenemos un estado con energiaInicial conocida (modelos 2 y 4),
+    // además, si tenemos un estado con energiaInicial conocida (modelo 2),
     // puede haber otra diferencia entre la energía inicial y la suma actual que
     // no esté registrada en energiaPerdida (p. ej. modelado idealizado).
-    if (modeloActual === 2 || modeloActual === 4) {
+    if (modeloActual === 2) {
         const diferencia = Math.max(0, (bola.energiaInicial || 0) - (ep + ek + ee));
         // evitamos doble contarlo: restamos lo que ya acumulamos por rozamiento
         const extra = Math.max(0, diferencia - (bola.energiaPerdida || 0));
@@ -262,11 +261,35 @@ function dibujarRampaCurvaResorte(offsetLocal = 0) {
 }
 
 // ---------------- Inicializar ----------------
+// ---------------- Inicializar ----------------
 function inicializar() {
     const masa = parseFloat(document.getElementById("masa").value) || 1;
-    const velocidadIn = parseFloat(document.getElementById("velocidad").value) || 0;
+    const velocidadIn = parseFloat(document.getElementById("velocidad").value) || 1;
     const distancia = parseFloat(document.getElementById("distancia").value) || 200;
     const radio = 10;
+
+    // Validaciones
+    if (masa <= 0) {
+        mostrarErrorUI("La masa debe ser mayor a 0 kg.");
+        return;
+    }
+
+    if (modeloActual === 1 || modeloActual === 2 || modeloActual === 4) {
+        if (distancia <= 0) {
+            mostrarErrorUI("La distancia debe ser mayor a 0 metros.");
+            return;
+        }
+    }
+
+    if (modeloActual === 3) {
+        const altura = parseFloat(document.getElementById("altura").value) || 1;
+        if (altura <= 0) {
+            mostrarErrorUI("La altura debe ser mayor a 0 metros.");
+            return;
+        }
+    }
+
+    limpiarErrorUI();
 
     datosGrafico = {
         posiciones: [],
@@ -311,22 +334,6 @@ function inicializar() {
     }
 
     else if (modeloActual === 4) {
-        const altura = parseFloat(document.getElementById("altura").value) || 1;
-
-        bola = {
-            x: 0,
-            y: curvaRampaY(0) - radio,
-            radio, masa,
-            velocidad: 0,
-            energiaInicial: masa * 9.81 * altura,
-            energiaElastica: 0,
-            longitudTotal: 600,
-            trail: [],
-            energiaPerdida: 0
-        };
-    }
-
-    else if (modeloActual === 5) {
         const distancia = parseFloat(document.getElementById("distancia").value) || 200;
         const masa = parseFloat(document.getElementById("masa").value) || 1;
         const velocidadIn = parseFloat(document.getElementById("velocidad").value) || 0;
@@ -339,8 +346,8 @@ function inicializar() {
             energiaElastica: 0,
             longitudTotal: distancia * 30,
             trail: [],
-            inResorte: false,                // si está interactuando con el resorte
-            energiaEnResorteTotal: 0,        // energía total "retenida" por el sistema resorte+bola al entrar
+            inResorte: false,
+            energiaEnResorteTotal: 0,
             prevCompresionPx: 0,
             ultimaEnergiaTotal: 0,
             energiaPerdida: 0
@@ -409,27 +416,6 @@ function dibujarEscena() {
     }
 
     else if (modeloActual === 4) {
-        dibujarRampaCurvaResorte(offset);
-
-        const rampaLargo = 300;
-        const pisoY = curvaRampaY(rampaLargo);
-
-        ctx.strokeStyle = "#666";
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(rampaLargo - offset, pisoY);
-        ctx.lineTo(bola.longitudTotal - offset, pisoY);
-        ctx.stroke();
-
-        ctx.fillStyle = "red";
-        for (let x = rozamientoZona.inicio; x < rozamientoZona.fin; x += 12) {
-            ctx.beginPath();
-            ctx.arc(x - offset, pisoY + 5, 2, 0, Math.PI * 2);
-            ctx.fill();
-        }
-    }
-
-    else if (modeloActual === 5) {
         ctx.fillStyle = "rgb(200,180,150)";
         ctx.fillRect(-offset, PISO_Y, bola.longitudTotal + offset + 100, 3);
 
@@ -476,18 +462,6 @@ function dibujarEscena() {
     ctx.fill();
 }
 
-function mostrarErrorUI(mensaje) {
-    const resultadoP = document.getElementById("resultado");
-    resultadoP.textContent = "⚠️ " + mensaje;
-    resultadoP.style.color = "yellow"; // O el color de error que prefieras
-}
-
-function limpiarErrorUI() {
-    const resultadoP = document.getElementById("resultado");
-    resultadoP.textContent = "Energía final:";
-    resultadoP.style.color = "rgb(248, 108, 61)"; // Vuelve al color original (según tu styles.css)
-}
-
 function generarGrafico() {
     // Mostrar el contenedor del gráfico
     document.getElementById('grafico-container').style.display = 'block';
@@ -524,8 +498,8 @@ function generarGrafico() {
         tension: 0.4
     });
 
-    // Energía Elástica (solo modelo 5)
-    if (modeloActual === 5) {
+    // Energía Elástica (solo modelo 4)
+    if (modeloActual === 4) {
         datasets.push({
             label: 'Energía Elástica',
             data: datosGrafico.ee,
@@ -536,8 +510,8 @@ function generarGrafico() {
         });
     }
 
-    // Energía Perdida (modelos 2 y 5)
-    if (modeloActual === 2 || modeloActual === 5) {
+    // Energía Perdida (modelos 2 y 4)
+    if (modeloActual === 2 || modeloActual === 4) {
         datasets.push({
             label: 'Energía Perdida',
             data: datosGrafico.elost,
@@ -629,14 +603,54 @@ function generarGrafico() {
 
 // ----------------- Movimiento -----------------
 function moverBola() {
+        // Validación al inicio del movimiento
+        const masa = parseFloat(document.getElementById("masa").value);
+        const muK = parseFloat(document.getElementById("mu").value);
+        
+        if (masa <= 0) {
+            mostrarErrorUI("La masa debe ser mayor a 0 kg.");
+            cancelAnimationFrame(animacionActiva);
+            animacionActiva = null;
+            return;
+        }
+    
+        if (modeloActual === 1 || modeloActual === 2 || modeloActual === 5) {
+            const distancia = parseFloat(document.getElementById("distancia").value);
+            const velocidadIn = parseFloat(document.getElementById("velocidad").value);
+            if (distancia <= 0) {
+                mostrarErrorUI("La distancia debe ser mayor a 0 metros.");
+                cancelAnimationFrame(animacionActiva);
+                animacionActiva = null;
+                return;
+            }
+
+            if(velocidadIn===0){
+                mostrarErrorUI("La velocidad inicial debe ser distinta de 0 m/s.");
+                cancelAnimationFrame
+                animacionActiva=null;
+                return
+            }
+            
+        }
+    
+        if (modeloActual === 3 || modeloActual === 4) {
+            const altura = parseFloat(document.getElementById("altura").value);
+            if (altura <= 0) {
+                mostrarErrorUI("La altura debe ser mayor a 0 metros.");
+                cancelAnimationFrame(animacionActiva);
+                animacionActiva = null;
+                return;
+            }
+        }
+        
+        // ... resto del código de moverBola()
     const dt = 0.1;
-    const muK = parseFloat(document.getElementById("mu").value);
     const g = 9.81;
     const aceleracionRozamiento = muK * g;
     const rozamiento = (aceleracionRozamiento * dt) / 10;
 
-    // -------- MODELO 5 --------
-    if (modeloActual === 5) {
+    // -------- MODELO 4 --------
+    if (modeloActual === 4) {
         if (muK >= 0 && muK <= 1) {
           muKvalue = muK;
           limpiarErrorUI();
@@ -777,68 +791,6 @@ function moverBola() {
         bola.y = PISO_Y - bola.radio;
     }
 
-
-    // -------- MODELO 4 --------
-    if (modeloActual === 4) {
-        const dx = 1;
-        const dy = curvaRampaY(bola.x + dx) - curvaRampaY(Math.max(0, bola.x - dx));
-        const pendiente = dy / (2 * dx);
-        const ang = Math.atan(pendiente || 0);
-        const g = 9.81;
-        const a = g * Math.sin(ang);
-
-        bola.velocidad += a * dt;
-        bola.velocidad = clamp(bola.velocidad, -200, 200);
-        bola.x += bola.velocidad * dt * 10;
-
-        const rampaLargo = 300;
-        const pisoY = curvaRampaY(rampaLargo);
-
-        if (bola.x < rampaLargo) {
-            bola.y = curvaRampaY(bola.x) - bola.radio;
-        } else {
-            bola.y = pisoY - bola.radio;
-        }
-
-        if (bola.x > rozamientoZona.fin && bola.x + bola.radio < 520) {
-          bola.energiaElastica = 0;
-        }
-
-        if (bola.x > rozamientoZona.inicio && bola.x < rozamientoZona.fin) {
-            // acumulamos pérdida causada por esta reducción (similar a model 2/5)
-            const vAntes = bola.velocidad;
-            if (bola.velocidad > 0) bola.velocidad -= 0.1;
-            else bola.velocidad += 0.1;
-            if (Math.abs(bola.velocidad) <= 0.1) {
-              bola.velocidad = 0
-            }
-            const vDespues = bola.velocidad;
-            const dE = 0.5 * bola.masa * (vAntes * vAntes - vDespues * vDespues);
-            if (dE > 0) {
-                bola.energiaPerdida = (bola.energiaPerdida || 0) + dE;
-            }
-
-            if (Math.abs(bola.velocidad) < 0.002) bola.velocidad = 0;
-        }
-
-        const inicioResorte = 520;
-        const kResorte = 3;
-
-        if (bola.x + bola.radio >= inicioResorte) {
-            const compresion = (bola.x + bola.radio) - inicioResorte;
-
-            if (compresion > 0) {
-                bola.energiaElastica = 0.5 * kResorte * compresion * compresion;
-                const F_resorte = -kResorte * compresion;
-                const a_resorte = F_resorte / bola.masa;
-
-                bola.velocidad += a_resorte;
-                bola.x += bola.velocidad * dt * 10;
-                bola.y = pisoY - bola.radio;
-            }
-        }
-    }
-
     // -------- MODELO 3 --------
     if (modeloActual === 3) {
         const dx = 1;
@@ -856,7 +808,6 @@ function moverBola() {
     }
 
     // -------- MODELO 2 --------
-    // -------- MODELO 2 --------
 if (modeloActual === 2) {
     const enZona = bola.x > rozamientoZona.inicio && bola.x < rozamientoZona.fin;
     if (muK >= 0 && muK <= 1) {
@@ -870,7 +821,7 @@ if (modeloActual === 2) {
     if (enZona) {
         const vAntes = bola.velocidad;
         bola.velocidad -= rozamiento;
-        if (bola.velocidad <= 0) {  // ← Cambié de < a <=
+        if (bola.velocidad <= 0) {  
             bola.velocidad = 0;
             const vDespues = bola.velocidad;
             const dE = 0.5 * bola.masa * (vAntes * vAntes - vDespues * vDespues);
@@ -878,12 +829,11 @@ if (modeloActual === 2) {
                 bola.energiaPerdida = (bola.energiaPerdida || 0) + dE;
             }
             
-            // ← AGREGUÉ ESTO: Detener animación y mostrar gráfico
             actualizarEnergia();
             resultado.textContent = `Energía final: 0.0 J`;
             cancelAnimationFrame(animacionActiva);
             animacionActiva = null;
-            generarGrafico();  // ← Esta es la línea clave
+            generarGrafico();  
             return;  // ← Salir de la función para detener la animación
         }
         const vDespues = bola.velocidad;
@@ -945,7 +895,7 @@ if (modeloActual === 2) {
     }
 
     // ---- NUEVO: detectar cuando vuelve hacia la izquierda y termina el recorrido ----
-    if (modeloActual === 5) {
+    if (modeloActual === 4) {
         // calculamos energía total actual (EP=0 en este modelo de piso plano)
         const ep = 0;
         const ek = 0.5 * bola.masa * bola.velocidad * bola.velocidad;
@@ -985,6 +935,17 @@ function resetParametrosUI() {
     labelMu.style.display = "block";
 }
 
+function mostrarErrorUI(mensaje) {
+    const resultadoP = document.getElementById("resultado");
+    resultadoP.textContent = "⚠️ " + mensaje;
+    resultadoP.style.color = "yellow"; // O el color de error que prefieras
+}
+
+function limpiarErrorUI() {
+    const resultadoP = document.getElementById("resultado");
+    resultadoP.textContent = "Energía final:";
+    resultadoP.style.color = "rgb(248, 108, 61)"; 
+}
 
 // ----------------- EVENTOS -----------------
 btnIniciar.addEventListener("click", () => {
@@ -1005,7 +966,6 @@ btnModelo1.addEventListener("click", () => {
     btnModelo2.style.backgroundColor = "";
     btnModelo3.style.backgroundColor = "";
     btnModelo4.style.backgroundColor = "";
-    btnModelo5.style.backgroundColor = "";
 
     inicializar();   // coloca bola y valores iniciales
     dibujarEscena(); 
@@ -1022,7 +982,6 @@ btnModelo2.addEventListener("click", () => {
     btnModelo1.style.backgroundColor = "";
     btnModelo3.style.backgroundColor = "";
     btnModelo4.style.backgroundColor = "";
-    btnModelo5.style.backgroundColor = "";
 
     inicializar();   // coloca bola y valores iniciales
     dibujarEscena(); 
@@ -1041,36 +1000,18 @@ btnModelo3.addEventListener("click", () => {
     btnModelo1.style.backgroundColor = "";
     btnModelo2.style.backgroundColor = "";
     btnModelo4.style.backgroundColor = "";
-    btnModelo5.style.backgroundColor = "";
 
     inicializar();   // coloca bola y valores iniciales
     dibujarEscena(); 
 });
 
-//btnModelo4.addEventListener("click", () => {
-//   resetParametrosUI()
-//
-//    modeloActual = 4;
-//    btnModelo4.style.backgroundColor = "rgb(100,180,255)";
-//    labelAltura.style.display = "block";
-//    labelVelocidad.style.display = "none";
-//    labelDistancia.style.display = "none";
-//    labelMu.style.display = "block";
-//
-//    btnModelo1.style.backgroundColor = "";
-//   btnModelo2.style.backgroundColor = "";
-//    btnModelo3.style.backgroundColor = "";
-//    btnModelo5.style.backgroundColor = "";
-//
-//    inicializar();   // coloca bola y valores iniciales
-//    dibujarEscena(); 
-//});
 
-btnModelo5.addEventListener("click", () => {
+
+btnModelo4.addEventListener("click", () => {
     resetParametrosUI()
 
-    modeloActual = 5;
-    btnModelo5.style.backgroundColor = "rgb(100,180,255)";
+    modeloActual = 4;
+    btnModelo4.style.backgroundColor = "rgb(100,180,255)";
     labelAltura.style.display = "none";
     labelVelocidad.style.display = "block";
     labelDistancia.style.display = "block";
@@ -1079,7 +1020,6 @@ btnModelo5.addEventListener("click", () => {
     btnModelo1.style.backgroundColor = "";
     btnModelo2.style.backgroundColor = "";
     btnModelo3.style.backgroundColor = "";
-    btnModelo4.style.backgroundColor = "";
 
     inicializar();   // coloca bola y valores iniciales
     dibujarEscena(); 
