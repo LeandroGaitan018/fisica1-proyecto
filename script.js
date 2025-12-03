@@ -275,8 +275,8 @@ function inicializar() {
     }
 
     if (modeloActual === 1 || modeloActual === 2 || modeloActual === 4) {
-        if (distancia <= 0) {
-            mostrarErrorUI("La distancia debe ser mayor a 0 metros.");
+        if (distancia < 30) {
+            mostrarErrorUI("La distancia debe ser mayor o igual a 30 metros.");
             return;
         }
     }
@@ -614,11 +614,11 @@ function moverBola() {
             return;
         }
     
-        if (modeloActual === 1 || modeloActual === 2 || modeloActual === 5) {
+        if (modeloActual === 1 || modeloActual === 2 || modeloActual === 4) {
             const distancia = parseFloat(document.getElementById("distancia").value);
             const velocidadIn = parseFloat(document.getElementById("velocidad").value);
-            if (distancia <= 0) {
-                mostrarErrorUI("La distancia debe ser mayor a 0 metros.");
+            if (distancia < 30) {
+                mostrarErrorUI("La distancia debe ser mayor o igual a 30 metros.");
                 cancelAnimationFrame(animacionActiva);
                 animacionActiva = null;
                 return;
@@ -633,7 +633,7 @@ function moverBola() {
             
         }
     
-        if (modeloActual === 3 || modeloActual === 4) {
+        if (modeloActual === 3) {
             const altura = parseFloat(document.getElementById("altura").value);
             if (altura <= 0) {
                 mostrarErrorUI("La altura debe ser mayor a 0 metros.");
