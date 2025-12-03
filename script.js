@@ -1,4 +1,3 @@
-// script.js
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 const resultado = document.getElementById("resultado");
@@ -8,6 +7,7 @@ const btnModelo2 = document.getElementById("modelo2");
 const btnModelo3 = document.getElementById("modelo3");
 const btnModelo4 = document.getElementById("modelo4");
 
+//Parametros de entrada
 const labelAltura = document.getElementById("label-altura");
 const labelDistancia = document.getElementById("label-distancia");
 const labelVelocidad = document.getElementById("label-velocidad");
@@ -95,12 +95,6 @@ function actualizarEnergia() {
     epDisplay.textContent = "0.00 J";
     eeDisplay.textContent = "0.00 J";
     etDisplay.textContent = "0.00 J";
-
-    // Para modelo 5, asegurar que energía perdida = energía inicial
-    if (modeloActual === 5) {
-      bola.energiaPerdida = bola.energiaInicial;
-    }
-
     const elost = bola.energiaPerdida || 0;
     elostDisplay.textContent = elost.toFixed(2) + " J";
     return;
@@ -171,7 +165,16 @@ function actualizarEnergia() {
 
     contadorFrames++;
     if (contadorFrames % 3 === 0) {
-        const posicionMetros = pixelsAMetros(bola.x);
+        // Convertir pixels a metros correctamente según el modelo
+        let posicionMetros;
+        if (modeloActual === 1 || modeloActual === 2 || modeloActual === 4) {
+            // Para estos modelos, la distancia se multiplica por 30 al crear longitudTotal
+            posicionMetros = bola.x / 30;
+        } else {
+            // Para modelo 3, usar la conversión estándar
+            posicionMetros = pixelsAMetros(bola.x);
+        }
+        
         datosGrafico.posiciones.push(posicionMetros);
         datosGrafico.ep.push(ep);
         datosGrafico.ek.push(ek);
@@ -261,7 +264,6 @@ function dibujarRampaCurvaResorte(offsetLocal = 0) {
 }
 
 // ---------------- Inicializar ----------------
-// ---------------- Inicializar ----------------
 function inicializar() {
     const masa = parseFloat(document.getElementById("masa").value) || 1;
     const velocidadIn = parseFloat(document.getElementById("velocidad").value) || 1;
@@ -325,7 +327,7 @@ function inicializar() {
             radio, masa,
             velocidad: 0,
             distanciaRecorrida: 0,
-            energiaInicial: masa * 9.81 * altura, // Ahora usa directamente el input
+            energiaInicial: masa * 9.81 * altura, 
             energiaFinal: 0,
             longitudTotal: 600,
             trail: [],
@@ -643,7 +645,6 @@ function moverBola() {
             }
         }
         
-        // ... resto del código de moverBola()
     const dt = 0.1;
     const g = 9.81;
     const aceleracionRozamiento = muK * g;
@@ -894,7 +895,7 @@ if (modeloActual === 2) {
         return;
     }
 
-    // ---- NUEVO: detectar cuando vuelve hacia la izquierda y termina el recorrido ----
+    // detectar cuando vuelve hacia la izquierda y termina el recorrido ----
     if (modeloActual === 4) {
         // calculamos energía total actual (EP=0 en este modelo de piso plano)
         const ep = 0;
@@ -902,7 +903,6 @@ if (modeloActual === 2) {
         const ee = bola.energiaElastica || 0;
         const energiaTotalActual = ep + ek + ee;
 
-        // almacenamos para debug / referencia
         bola.ultimaEnergiaTotal = energiaTotalActual;
 
         // si vuelve hacia la izquierda y llegó al inicio (x pequeño), mostramos energía final
@@ -938,17 +938,23 @@ function resetParametrosUI() {
 function mostrarErrorUI(mensaje) {
     const resultadoP = document.getElementById("resultado");
     resultadoP.textContent = "⚠️ " + mensaje;
-    resultadoP.style.color = "yellow"; // O el color de error que prefieras
+    resultadoP.style.color = "yellow"; 
 }
 
 function limpiarErrorUI() {
     const resultadoP = document.getElementById("resultado");
     resultadoP.textContent = "Energía final:";
-    resultadoP.style.color = "rgb(248, 108, 61)"; 
+    resultadoP.style.color = "rgb(255, 255, 255)"; 
 }
 
 // ----------------- EVENTOS -----------------
 btnIniciar.addEventListener("click", () => {
+    if (window.innerWidth <= 900) {
+        window.scrollTo({
+            top: 0,
+            behavior: "smooth"
+        });
+    }
     inicializar();
     if (animacionActiva) cancelAnimationFrame(animacionActiva);
     animacionActiva = requestAnimationFrame(moverBola);
@@ -967,7 +973,7 @@ btnModelo1.addEventListener("click", () => {
     btnModelo3.style.backgroundColor = "";
     btnModelo4.style.backgroundColor = "";
 
-    inicializar();   // coloca bola y valores iniciales
+    inicializar();  
     dibujarEscena(); 
 });
 
@@ -983,7 +989,7 @@ btnModelo2.addEventListener("click", () => {
     btnModelo3.style.backgroundColor = "";
     btnModelo4.style.backgroundColor = "";
 
-    inicializar();   // coloca bola y valores iniciales
+    inicializar();   
     dibujarEscena(); 
 });
 
@@ -1001,7 +1007,7 @@ btnModelo3.addEventListener("click", () => {
     btnModelo2.style.backgroundColor = "";
     btnModelo4.style.backgroundColor = "";
 
-    inicializar();   // coloca bola y valores iniciales
+    inicializar();   
     dibujarEscena(); 
 });
 
@@ -1021,7 +1027,7 @@ btnModelo4.addEventListener("click", () => {
     btnModelo2.style.backgroundColor = "";
     btnModelo3.style.backgroundColor = "";
 
-    inicializar();   // coloca bola y valores iniciales
+    inicializar();   
     dibujarEscena(); 
 });
 
