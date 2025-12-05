@@ -252,6 +252,20 @@ button:active {
     font-size: 1em;
 }
 
+footer{
+    margin-top: 0.1em;
+    display: flex;
+    color: #0f3460;
+    font-size:1.1em;
+    justify-content: space-around;
+    border: none;
+    background: linear-gradient(135deg, #0f2027 0%, #284953 50%, #2c5364 100%);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+
+
+
 @media (max-width: 900px) {
     .contenedor-grid{
         display: grid;
@@ -291,4 +305,15 @@ button:active {
         height: auto;
     }
 
+    footer{
+        margin-top: -0.3em;
+        display: flex;
+        color: #0f3460;
+        font-size:0.89em;
+        padding-left: 1em;
+        justify-content: space-evenly;
+        border: none;
+        background: linear-gradient(135deg, #0f2027 0%, #284953 50%, #2c5364 100%);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    }
 }
