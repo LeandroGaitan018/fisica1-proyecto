@@ -310,8 +310,8 @@ footer{
         display: flex;
         color: #0f3460;
         font-size:0.89em;
-        padding-left: 1em;
-        justify-content: space-evenly;
+        padding-left: 1.9em;
+        justify-content: center;
         border: none;
         background: linear-gradient(135deg, #0f2027 0%, #284953 50%, #2c5364 100%);
         box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
